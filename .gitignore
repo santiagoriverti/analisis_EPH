@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# Bases EPH descargadas (pueden ser pesadas) - se versionan solo si caben
+data/raw/*.zip
+data/raw/*.txt.bak
+
+# Claude helper scripts (no versionar)
+.claude/*.py
+.claude/*.sh
