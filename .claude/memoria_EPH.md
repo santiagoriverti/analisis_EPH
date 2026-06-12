@@ -67,6 +67,11 @@ informalidad laboral (`EMPLEO`, `SECTOR`), estrategias del hogar e ingresos no l
   **de las personas** `P_DECCF`, `P_RDECCF`, `P_GDECCF`, `P_PDECCF`, `P_IDECCF`,
   `P_ADECCF`.
 
+**Verificado en datos reales (2026-06-12):** tras compilar los 36 trimestres, las
+columnas del merge individuo+hogar son **264** (≤T3-2023) y **332** (≥T4-2023), y las
+variables nuevas (`EMPLEO`, `SECTOR`, `P_DECCF`, `V2_01_M`, `V5_01_M`) tienen su primer
+dato en **2023T4**, confirmando el quiebre.
+
 **Implicancia para los notebooks:** al concatenar trimestres de ambos esquemas, las
 columnas no comunes quedarán con `NaN` en los trimestres que no las tienen. Para análisis
 de informalidad (`EMPLEO`/`SECTOR`) o ingresos desagregados, **filtrar a T4-2023 en

@@ -1,5 +1,37 @@
 # Memoria del proyecto: analisis_EPH
 
+## ⭐ HANDOFF (última sesión: 2026-06-12) — leer esto primero
+
+**Estado: notebook 00 (compilador) FUNCIONA end-to-end y validado en Colab.**
+
+Lo logrado y verificado en Colab:
+- Los 36 trimestres (T1-2017 → T4-2025, incluye T4-2020) se compilan a
+  **un parquet por trimestre** guardado en **Google Drive**
+  (`/content/drive/MyDrive/carga_EPH/processed/eph_T<Q><YY>.parquet`), persistente.
+- Total: **1.825.881 filas**. Merge individuo+hogar OK (cada persona trae `ITF`/`IPCF` del hogar).
+- Montos numéricos OK: `ITF` int64, `IPCF` float64 (ej. `2933333.33` con punto). Fix de
+  coma decimal aplicado (`decimal=","` en `_read_csv`).
+- Quiebre de esquema 4T2023 confirmado: `EMPLEO`, `SECTOR`, `P_DECCF`, `V2_01_M`,
+  `V5_01_M` empiezan en 2023T4. Cols del merge: 264 (≤T3-2023) / 332 (≥T4-2023).
+
+**Decisión tomada (Opción A):** los parquets viven en Drive (`carga_EPH/processed`), NO se
+versionan en GitHub. Los notebooks 01-05 los leen con
+`load_panel(columns=[...], quarters=[...], out_dir=PROCESSED_DIR)` donde
+`PROCESSED_DIR = "/content/drive/MyDrive/carga_EPH/processed"`.
+
+**PRÓXIMO PASO (martes):** crear `notebooks/01_demografia.ipynb` — pirámide de población
+(edad `CH06` × sexo `CH04`), composición de hogares (`CH03`), distribución por región/
+aglomerado, evolución temporal. Todo **ponderado con `PONDERA`** y leyendo con `load_panel`.
+El usuario aún no eligió cortes específicos (preguntar: set estándar vs. indicadores puntuales).
+Seguir el patrón de setup del notebook 00 (clonar repo + montar Drive + `PROCESSED_DIR`).
+Recordar el quiebre 4T2023 al usar variables nuevas. Agregar el badge Colab en la tabla del README.
+
+**Cómo retomar en Colab:** abrir notebook desde el badge del README → Runtime → Restart and
+run all → esperar a que termine la sección 4 ("Listo. Parquets en:") antes de seguir.
+Los parquets ya están en Drive, así que para los notebooks 01-05 NO hace falta recompilar.
+
+---
+
 ## Qué es
 
 Repositorio de notebooks (Colab) para análisis de la Encuesta Permanente de Hogares (EPH,
@@ -30,12 +62,20 @@ INDEC y subidos a Google Drive (carpeta `carga_EPH`).
     descomprimir a disco) o desde `data/raw/`.
   - `list_available_quarters()` devuelve los `(year, period)` que tienen AMBAS bases
     (individual + hogar) disponibles.
-  - `build_panel(quarters=None, save=True)`: si `quarters` es None usa
-    `list_available_quarters()`; une individuos+hogares por `CODUSU`+`NRO_HOGAR`
-    (`merge_individual_hogar`), agrega `ANIO`/`TRIMESTRE`, corrige columnas con tipos
-    mezclados (`_fix_mixed_type_columns`, necesario para exportar a parquet — ej.
-    `CH05` viene como int en algunos trimestres y string en otros) y guarda
-    `data/processed/eph_T<Q><YY>.parquet` + `data/processed/eph_panel.parquet`.
+  - `_read_csv` usa `sep=";"`, `encoding="latin1"`, `decimal=","` (montos con coma decimal).
+  - `build_panel(quarters=None, search_dirs=None, out_dir=None, overwrite=False)`:
+    procesa **un trimestre por vez** (memory-safe), une individuos+hogares por
+    `CODUSU`+`NRO_HOGAR` (`merge_individual_hogar`), agrega `ANIO`/`TRIMESTRE`, corrige
+    columnas con tipos mezclados (`_fix_mixed_type_columns` — ej. `CH05` int/string según
+    trimestre) y guarda **un parquet por trimestre** en `out_dir` (por defecto
+    `data/processed/`, en el notebook se pasa la carpeta de Drive). Con `overwrite=False`
+    saltea los ya compilados. Devuelve un resumen (lista de dicts), NO el DataFrame.
+    Imprime progreso por trimestre.
+  - `load_panel(columns=None, quarters=None, out_dir=None)`: lee los parquets por
+    trimestre de `out_dir` y los concatena, tomando solo las columnas pedidas (si una
+    columna no existe en un trimestre viejo, la saltea). Es la función que usan los
+    notebooks 01-05. Lanza `FileNotFoundError` claro si no hay parquets.
+  - **NO existe `eph_panel.parquet`** (un panel único superaría RAM de Colab y 100 MB de GitHub).
 - **Bases nuevas**: el usuario las descarga manualmente del sitio del INDEC y las sube
   a Drive `carga_EPH` (no se automatiza scraping). Para agregar un trimestre nuevo NO
   hace falta tocar código: `00_preparacion_bases.ipynb` detecta automáticamente todo lo
@@ -47,13 +87,13 @@ INDEC y subidos a Google Drive (carpeta `carga_EPH`).
 
 - Estructura de carpetas creada (`notebooks/`, `data/raw/`, `data/processed/`, `src/`).
 - `src/data_loader.py` reescrito sin dependencia de `pyeph` (ver arriba).
-- `notebooks/00_preparacion_bases.ipynb`: monta Drive, lista trimestres disponibles en
-  `carga_EPH`, construye el panel y lo guarda en `data/processed/`.
-- README actualizado con el flujo de Drive y el badge "Abrir en Colab" de
-  `00_preparacion_bases.ipynb`.
-- Bases confirmadas disponibles en INDEC al momento de escribir: T1-2023 a T4-2025
-  (T1-2026 se publica ~3 de agosto). El usuario está subiendo todos los `.zip` a Drive.
-- Ningún notebook de análisis (01-05) tiene contenido todavía.
+- `notebooks/00_preparacion_bases.ipynb`: **completo, validado y funcionando** en Colab.
+  6 secciones numeradas: Setup → Diagnóstico → Trimestres disponibles → Compilación →
+  Verificación merge/montos → Verificación esquema 4T2023. Guarda los parquets en Drive.
+- README actualizado: notebook 00 en la tabla con badge "Abrir en Colab"; documentado el
+  flujo Drive, `load_panel`, y el quiebre 4T2023.
+- Bases en Drive: **36 trimestres T1-2017 → T4-2025** (T1-2026 se publica ~3 de agosto).
+- Notebooks de análisis 01-05: **todavía sin contenido** (próximo paso: 01_demografia).
 
 ## Naming irregular dentro de los zips del INDEC (detectado 2026-06-12)
 
@@ -142,15 +182,13 @@ Cambios:
 
 ## Próximos pasos
 
-1. **Pendiente de validación end-to-end**: correr `00_preparacion_bases.ipynb` en
-   Colab una vez que el usuario haya subido los `.zip` a `carga_EPH`, confirmar que
-   `list_available_quarters()` los detecta y que `build_panel()` corre sin errores.
-2. Una vez validado, decidir si los `.parquet` de `data/processed/` se comitean al
-   repo (pueden ser pesados — evaluar Git LFS o no versionarlos y que cada notebook
-   corra 00 primero).
-3. Implementar `01_demografia.ipynb` leyendo `data/processed/eph_panel.parquet`.
-4. Agregar badges "Abrir en Colab" para cada notebook nuevo en el README.
-5. Implementar el resto de notebooks (02-05) siguiendo el mismo patrón.
+1. **Implementar `01_demografia.ipynb`** (próximo, martes): pirámide edad×sexo, hogares,
+   región/aglomerado, evolución temporal. Leer con `load_panel(..., out_dir=PROCESSED_DIR)`,
+   ponderar con `PONDERA`. Preguntar al usuario qué cortes priorizar. Agregar badge Colab al README.
+2. Implementar el resto de notebooks (02-05) siguiendo el mismo patrón.
+3. (Opcional, baja prioridad) investigar la anomalía de T3-2021 (266 cols vs 264).
+4. Cuando salga T1-2026 (~3 ago): subir su `.zip` a `carga_EPH` y correr el notebook 00
+   con `overwrite=False` (compila solo el trimestre nuevo).
 
 ## Notas sobre la EPH (para tener en cuenta al diseñar los notebooks)
 
