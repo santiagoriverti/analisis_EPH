@@ -72,6 +72,22 @@ Se agregó en `src/data_loader.py`:
 Con esto los 36 trimestres (T1-2017 a T4-2025, incluyendo T4-2020) deberían quedar
 disponibles en `list_available_quarters()`.
 
+## Diccionario de datos EPH (creado 2026-06-12)
+
+`.claude/memoria_EPH.md` es el **diccionario completo** de las bases EPH (hogar +
+personas): significado y valores de cada variable, combinando el PDF oficial
+`EPH_registro_4T2025.pdf` con la verificación de los headers reales de los 36 `.txt`.
+
+Hallazgo crítico documentado ahí: **quiebre de esquema en 4T2023**.
+- Hasta T3-2023: 177 cols individual / 88 cols hogar (esquema "viejo", ingresos agregados).
+- Desde T4-2023: 235 cols individual / 98 cols hogar (esquema "nuevo": agrega `EMPLEO`,
+  `SECTOR`, ingresos/pensiones desagregados, deciles `P_DECCF` de personas).
+- Implicancia: al concatenar el panel, las columnas nuevas quedan NaN en trimestres
+  viejos. Para informalidad/ingresos desagregados restringir a T4-2023+; para series
+  largas usar solo variables comunes.
+
+Consultar `memoria_EPH.md` antes de escribir cualquier notebook de análisis.
+
 ## Próximos pasos
 
 1. **Pendiente de validación end-to-end**: correr `00_preparacion_bases.ipynb` en

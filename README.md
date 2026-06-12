@@ -77,6 +77,12 @@ de estos archivos en lugar de descargar y unir las bases de nuevo.
 pip install -r requirements.txt
 ```
 
+## Diccionario de datos
+
+Ver [`.claude/memoria_EPH.md`](.claude/memoria_EPH.md) para el **diccionario completo de
+variables** de las bases hogar y personas (significado y valores de cada campo), el
+mapa de claves de vínculo, los ponderadores y el **quiebre de esquema de 4T2023**.
+
 ## Memoria de proyecto
 
 Ver [`.claude/memoria.md`](.claude/memoria.md) para el estado del proyecto, decisiones
