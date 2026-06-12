@@ -80,7 +80,9 @@ def _base_type_from_name(name: str) -> str | None:
 
 
 def _read_csv(fileobj) -> pd.DataFrame:
-    return pd.read_csv(fileobj, sep=";", encoding="latin1", low_memory=False)
+    # decimal="," porque el INDEC usa coma decimal en los montos (ej. IPCF "2933333,33").
+    # Sin esto, esas columnas se leen como texto y rompen cualquier cálculo numérico.
+    return pd.read_csv(fileobj, sep=";", encoding="latin1", low_memory=False, decimal=",")
 
 
 def _find_sources(search_dirs: list[str] | None = None) -> dict[tuple[int, int], dict[str, object]]:

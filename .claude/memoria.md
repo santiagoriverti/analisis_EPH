@@ -88,6 +88,17 @@ Hallazgo crítico documentado ahí: **quiebre de esquema en 4T2023**.
 
 Consultar `memoria_EPH.md` antes de escribir cualquier notebook de análisis.
 
+## Fix coma decimal en montos (2026-06-12)
+
+Al correr el notebook 00 OK con los 36 trimestres, se vio que `IPCF` (y otros montos)
+venían como `2933333,33` (coma decimal del INDEC) → se leían como **texto**, rompiendo
+cálculos. Fix: `_read_csv` ahora usa `decimal=","` en `pd.read_csv`. Tras esto los montos
+(ITF, IPCF, P21, P47T, V*_M, etc.) quedan como float. Requiere re-correr el notebook 00.
+
+Nota: conteo de columnas del merge = 264 (esquema viejo) / 332 (esquema nuevo desde
+4T2023). Anomalía menor: T3-2021 dio 266 (2 columnas extra) — no bloquea, revisar si
+algún análisis lo necesita.
+
 ## Refactor memory-safe (2026-06-12) — IMPORTANTE
 
 Al correr el notebook 00 en Colab con los 36 trimestres, la sesión murió por RAM al
