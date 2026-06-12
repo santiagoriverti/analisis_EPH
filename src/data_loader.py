@@ -92,6 +92,20 @@ def merge_individual_hogar(df_individual: pd.DataFrame, df_hogar: pd.DataFrame) 
     return df_individual.merge(df_hogar, on=HOGAR_KEYS, how="left", validate="m:1")
 
 
+def _fix_mixed_type_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Convierte a string las columnas object con tipos mezclados (ej. int y str).
+
+    Esto evita errores de pyarrow al exportar a parquet, que requiere que cada
+    columna tenga un único tipo (algunas columnas de la EPH, como CH05, vienen
+    con valores numéricos y de texto mezclados en distintos trimestres/bases).
+    """
+    for col in df.select_dtypes(include="object").columns:
+        types = df[col].dropna().map(type).unique()
+        if len(types) > 1:
+            df[col] = df[col].astype(str)
+    return df
+
+
 def build_panel(quarters: list[tuple[int, int]], save: bool = True) -> pd.DataFrame:
     """Construye un panel combinando individuo+hogar para una lista de trimestres.
 
@@ -112,6 +126,7 @@ def build_panel(quarters: list[tuple[int, int]], save: bool = True) -> pd.DataFr
         df = merge_individual_hogar(df_ind, df_hog)
         df["ANIO"] = year
         df["TRIMESTRE"] = period
+        df = _fix_mixed_type_columns(df)
 
         if save:
             os.makedirs(PROCESSED_DIR, exist_ok=True)
@@ -120,6 +135,7 @@ def build_panel(quarters: list[tuple[int, int]], save: bool = True) -> pd.DataFr
         frames.append(df)
 
     panel = pd.concat(frames, ignore_index=True)
+    panel = _fix_mixed_type_columns(panel)
 
     if save:
         os.makedirs(PROCESSED_DIR, exist_ok=True)
