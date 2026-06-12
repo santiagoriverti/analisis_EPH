@@ -302,4 +302,12 @@ def load_panel(
         else:
             frames.append(pd.read_parquet(f))
 
+    if not frames:
+        existentes = sorted(os.path.basename(p) for p in glob.glob(os.path.join(out_dir, "eph_T*.parquet")))
+        raise FileNotFoundError(
+            f"No se encontraron parquets para leer en {out_dir}. "
+            f"¿Corriste primero la celda de compilación (build_panel)? "
+            f"Parquets actualmente presentes en esa carpeta: {existentes or 'ninguno'}"
+        )
+
     return pd.concat(frames, ignore_index=True)
