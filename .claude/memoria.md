@@ -88,6 +88,18 @@ Hallazgo crítico documentado ahí: **quiebre de esquema en 4T2023**.
 
 Consultar `memoria_EPH.md` antes de escribir cualquier notebook de análisis.
 
+## Notebook 00 actualizado (2026-06-12)
+
+`00_preparacion_bases.ipynb` quedó como el **notebook base/compilador** del proyecto.
+Cambios:
+- Intro reescrita: deja claro que compila los datos para que los notebooks 01-05 los
+  procesen, y advierte el quiebre de esquema 4T2023.
+- Celda de verificación del panel (filas/columnas, conteo por trimestre).
+- Celda nueva que reporta, para cada variable del esquema nuevo (`EMPLEO`, `SECTOR`,
+  `P_DECCF`, `V2_01_M`, `V5_01_M`), el primer trimestre con datos no nulos.
+- En el README, el notebook 00 ahora está **en la misma tabla** que 01-05, con su badge
+  "Abrir en Colab" (para ejecutarlo directo desde el README).
+
 ## Próximos pasos
 
 1. **Pendiente de validación end-to-end**: correr `00_preparacion_bases.ipynb` en
