@@ -40,7 +40,8 @@ analisis_EPH/
 | `04_vivienda.ipynb` | Condiciones habitacionales, hacinamiento, acceso a servicios | (pendiente) |
 | `05_educacion.ipynb` | Nivel educativo, asistencia escolar, analfabetismo | (pendiente) |
 
-Cada notebook va a tener un botón "Abrir en Colab" una vez publicado.
+A medida que se publiquen, se agregan acá con su botón "Abrir en Colab"
+(formato: `https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/<archivo>.ipynb`).
 
 ## Cómo agregar una base nueva manualmente
 
@@ -50,6 +51,10 @@ Cada notebook va a tener un botón "Abrir en Colab" una vez publicado.
    `usu_hogar_T<Q><YY>.txt`, por ejemplo `usu_individual_T424.txt` y
    `usu_hogar_T424.txt` para el T4 2024.
 3. Agregar el trimestre a `QUARTERS` en `notebooks/00_preparacion_bases.ipynb` y correrlo.
+
+## Abrir en Colab
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/00_preparacion_bases.ipynb) `00_preparacion_bases.ipynb`
 
 ## Notebook de preparación de bases
 
