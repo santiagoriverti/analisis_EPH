@@ -3,20 +3,23 @@
 Proyecto de notebooks reproducibles para analizar la **Encuesta Permanente de Hogares (EPH)**
 del INDEC (Argentina, encuesta trimestral): https://www.indec.gob.ar/indec/web/Institucional-Indec-BasesDeDatos
 
-Los notebooks están pensados para correr en **Google Colab**, leyendo las bases desde este
-repositorio público (`raw.githubusercontent.com`) o descargándolas directamente con la
-librería [`pyeph`](https://github.com/institutohumai/pyeph).
+Los notebooks están pensados para correr en **Google Colab**.
 
 ## Fuentes de datos
 
-1. **pyeph** (preferido): descarga las bases EPH oficiales (txt/xls → DataFrame) directamente
-   en el notebook. No siempre tiene los últimos 1-2 trimestres disponibles.
-2. **`data/raw/`**: bases de los trimestres más recientes que `pyeph` aún no tiene,
-   descargadas manualmente desde el sitio del INDEC y subidas a este repo en formato
-   `.txt` o `.xls` originales del INDEC.
+Las bases EPH se descargan **manualmente del INDEC** (sección "Bases de datos", microdatos
+trimestrales) en formato `.zip` (ej. `EPH_usu_4_Trim_2025_txt.zip`), que contiene dos `.txt`
+separados por `;`:
+- `usu_individual_T<Q><YY>.txt`
+- `usu_hogar_T<Q><YY>.txt`
 
-Los notebooks combinan ambas fuentes: intentan `pyeph` primero, y si el trimestre buscado
-no está disponible, caen a `data/raw/`.
+Esos `.zip` se suben **sin descomprimir** a una carpeta de **Google Drive** llamada
+`carga_EPH` (en la raíz de "Mi unidad"). El notebook `00_preparacion_bases.ipynb` monta
+Drive, escanea esa carpeta, detecta automáticamente todos los trimestres disponibles,
+une individuos+hogares y genera los datasets procesados en `data/processed/`.
+
+Como alternativa (o complemento), también se pueden colocar `.zip` o `.txt` sueltos en
+`data/raw/` del repo.
 
 ## Estructura del proyecto
 
@@ -43,14 +46,14 @@ analisis_EPH/
 A medida que se publiquen, se agregan acá con su botón "Abrir en Colab"
 (formato: `https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/<archivo>.ipynb`).
 
-## Cómo agregar una base nueva manualmente
+## Cómo agregar un trimestre nuevo
 
-1. Descargar del INDEC los archivos `usu_individual_TxQyy.txt` y `usu_hogar_TxQyy.txt`
-   (o `.xls`) del trimestre.
-2. Subirlos a `data/raw/` renombrados como `usu_individual_T<Q><YY>.txt` y
-   `usu_hogar_T<Q><YY>.txt`, por ejemplo `usu_individual_T424.txt` y
-   `usu_hogar_T424.txt` para el T4 2024.
-3. Agregar el trimestre a `QUARTERS` en `notebooks/00_preparacion_bases.ipynb` y correrlo.
+1. Descargar del INDEC el `.zip` del trimestre, ej. `EPH_usu_4_Trim_2025_txt.zip`
+   (contiene `usu_individual_T425.txt` y `usu_hogar_T425.txt`).
+2. Subir el `.zip` **sin descomprimir** a Google Drive, carpeta `carga_EPH`
+   (Mi unidad > `carga_EPH`).
+3. Volver a correr `notebooks/00_preparacion_bases.ipynb`: detecta automáticamente
+   todos los trimestres presentes en `carga_EPH`, no hace falta editar nada en el código.
 
 ## Abrir en Colab
 
@@ -58,9 +61,9 @@ A medida que se publiquen, se agregan acá con su botón "Abrir en Colab"
 
 ## Notebook de preparación de bases
 
-`notebooks/00_preparacion_bases.ipynb` es el punto de partida del proyecto: descarga
-las bases (pyeph + `data/raw/`), une individuos con hogares por `CODUSU` + `NRO_HOGAR`,
-y genera en `data/processed/`:
+`notebooks/00_preparacion_bases.ipynb` es el punto de partida del proyecto: lee los
+`.zip` del INDEC subidos a Google Drive (`carga_EPH`), une individuos con hogares por
+`CODUSU` + `NRO_HOGAR`, y genera en `data/processed/`:
 
 - `eph_T<Q><YY>.parquet`: un archivo por trimestre, individuos+hogares ya unidos.
 - `eph_panel.parquet`: panel con todos los trimestres concatenados.
