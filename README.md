@@ -42,7 +42,7 @@ y unir las bases de nuevo.
 
 | Notebook | Tema | Colab |
 |---|---|---|
-| `00_preparacion_bases.ipynb` | **Compilación de datos**: lee los `.zip` del INDEC desde Drive, une hogar+personas por `CODUSU`+`NRO_HOGAR`, arma el panel y lo guarda en `data/processed/` | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/00_preparacion_bases.ipynb) |
+| `00_preparacion_bases.ipynb` | **Compilación de datos**: lee los `.zip` del INDEC desde Drive, une hogar+personas por `CODUSU`+`NRO_HOGAR` y guarda un parquet por trimestre en `data/processed/` | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/00_preparacion_bases.ipynb) |
 | `01_demografia.ipynb` | Estructura poblacional: edad, sexo, composición de hogares, región | (pendiente) |
 | `02_mercado_laboral.ipynb` | Empleo, desempleo, informalidad, subocupación | (pendiente) |
 | `03_ingresos_pobreza.ipynb` | Distribución del ingreso, pobreza, indigencia, brechas | (pendiente) |
@@ -57,12 +57,20 @@ A medida que se publiquen los notebooks 01-05 se agregan acá con su botón "Abr
 1. Monta Google Drive y escanea `carga_EPH` (detecta automáticamente todos los trimestres).
 2. Para cada trimestre, lee `usu_individual` y `usu_hogar` desde el `.zip` y los une por
    `CODUSU` + `NRO_HOGAR` (relación persona→hogar, sufijo `_hogar` para columnas duplicadas).
-3. Agrega `ANIO`/`TRIMESTRE`, corrige columnas con tipos mezclados y guarda en `data/processed/`:
-   - `eph_T<Q><YY>.parquet`: un archivo por trimestre.
-   - `eph_panel.parquet`: panel con todos los trimestres concatenados.
+3. Agrega `ANIO`/`TRIMESTRE`, corrige columnas con tipos mezclados y guarda en
+   `data/processed/` **un parquet por trimestre** (`eph_T<Q><YY>.parquet`), procesando
+   un trimestre por vez para no desbordar la RAM de Colab. No se genera un único panel
+   combinado (sería >100 MB, supera el límite de GitHub).
 4. Reporta el **quiebre de esquema de 4T2023** (ver diccionario): los trimestres viejos
-   (≤T3-2023) tienen menos columnas, por lo que en el panel las variables nuevas
-   (`EMPLEO`, `SECTOR`, ingresos desagregados, etc.) quedan vacías para esos trimestres.
+   (≤T3-2023) no tienen las variables nuevas (`EMPLEO`, `SECTOR`, ingresos desagregados, etc.).
+
+Los notebooks 01-05 leen los datos con `load_panel(columns=..., quarters=...)`, pidiendo
+solo las columnas y trimestres necesarios (evita cargar todo en memoria):
+
+```python
+from src.data_loader import load_panel
+df = load_panel(columns=["CH06", "CH04", "REGION", "PONDERA"])  # ej. demografía
+```
 
 ## Cómo agregar un trimestre nuevo
 

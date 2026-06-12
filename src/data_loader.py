@@ -21,6 +21,7 @@ import re
 import zipfile
 
 import pandas as pd
+import pyarrow.parquet as pq
 
 # Carpeta de Google Drive donde se suben los .zip descargados del INDEC
 # (Drive > "carga_EPH"). En Colab, montar Drive primero con
@@ -190,46 +191,84 @@ def _fix_mixed_type_columns(df: pd.DataFrame) -> pd.DataFrame:
 def build_panel(
     quarters: list[tuple[int, int]] | None = None,
     search_dirs: list[str] | None = None,
-    save: bool = True,
-) -> pd.DataFrame:
-    """Construye un panel combinando individuo+hogar para una lista de trimestres.
+) -> list[dict]:
+    """Compila las bases EPH a un parquet por trimestre, de forma memory-safe.
 
-    Si `quarters` es None, usa todos los trimestres disponibles en
-    DRIVE_DIR / RAW_DIR (`list_available_quarters`).
+    Procesa **un trimestre por vez** (carga individual + hogar, los une por
+    CODUSU + NRO_HOGAR, agrega ANIO/TRIMESTRE, guarda el parquet y libera memoria).
+    NO concatena todo en RAM: con 36 trimestres × ~235 columnas eso desborda la
+    memoria de Colab. Además, un único panel combinado superaría el límite de 100 MB
+    de GitHub. Por eso se guarda un archivo por trimestre en `data/processed/`
+    (`eph_<TyyTQQ>.parquet`) y los notebooks lo leen con `load_panel()` eligiendo
+    solo las columnas/trimestres que necesiten.
 
-    Para cada (year, period):
-      - carga la base individual y la de hogares,
-      - las une por CODUSU + NRO_HOGAR,
-      - agrega columnas ANIO y TRIMESTRE.
+    Si `quarters` es None, usa todos los disponibles (`list_available_quarters`).
 
-    Si `save=True`, además de devolver el panel combinado, guarda en
-    `data/processed/` un parquet por trimestre (`eph_<TyyTQQ>.parquet`) y el
-    panel completo (`eph_panel.parquet`).
+    Devuelve un resumen (lista de dicts con year, period, filas, columnas, path).
     """
     if quarters is None:
         quarters = list_available_quarters(search_dirs)
 
-    frames = []
+    os.makedirs(PROCESSED_DIR, exist_ok=True)
+    resumen = []
     for year, period in quarters:
         df_ind = load_eph(year, period, base_type="individual", search_dirs=search_dirs)
         df_hog = load_eph(year, period, base_type="hogar", search_dirs=search_dirs)
 
         df = merge_individual_hogar(df_ind, df_hog)
+        del df_ind, df_hog
+
         df["ANIO"] = year
         df["TRIMESTRE"] = period
         df = _fix_mixed_type_columns(df)
 
-        if save:
-            os.makedirs(PROCESSED_DIR, exist_ok=True)
-            df.to_parquet(os.path.join(PROCESSED_DIR, f"eph_{_period_tag(year, period)}.parquet"))
+        path = os.path.join(PROCESSED_DIR, f"eph_{_period_tag(year, period)}.parquet")
+        df.to_parquet(path)
+        resumen.append(
+            {"year": year, "period": period, "filas": len(df), "columnas": df.shape[1], "path": path}
+        )
+        del df
 
-        frames.append(df)
+    return resumen
 
-    panel = pd.concat(frames, ignore_index=True)
-    panel = _fix_mixed_type_columns(panel)
 
-    if save:
-        os.makedirs(PROCESSED_DIR, exist_ok=True)
-        panel.to_parquet(os.path.join(PROCESSED_DIR, "eph_panel.parquet"))
+def load_panel(
+    columns: list[str] | None = None,
+    quarters: list[tuple[int, int]] | None = None,
+) -> pd.DataFrame:
+    """Lee los parquets por trimestre de `data/processed/` y los concatena.
 
-    return panel
+    Pensada para usarse en los notebooks 01-05. Para no desbordar la memoria de
+    Colab, conviene pasar `columns` con solo las variables necesarias (y opcionalmente
+    `quarters` con un subconjunto de trimestres).
+
+    Parameters
+    ----------
+    columns : list[str], opcional
+        Subconjunto de columnas a leer. Si None, lee todas (puede ser pesado).
+        ANIO y TRIMESTRE se incluyen siempre.
+    quarters : list[tuple[int, int]], opcional
+        Trimestres a incluir. Si None, usa todos los parquets presentes.
+    """
+    if quarters is None:
+        files = sorted(glob.glob(os.path.join(PROCESSED_DIR, "eph_T*.parquet")))
+    else:
+        files = [os.path.join(PROCESSED_DIR, f"eph_{_period_tag(y, p)}.parquet") for y, p in quarters]
+
+    cols = None
+    if columns is not None:
+        cols = list(dict.fromkeys([*columns, "ANIO", "TRIMESTRE"]))
+
+    frames = []
+    for f in files:
+        if not os.path.exists(f):
+            continue
+        if cols is not None:
+            # Leer solo las columnas pedidas que existan en ese trimestre (esquema 4T2023)
+            disponibles = pq.read_schema(f).names
+            usar = [c for c in cols if c in disponibles]
+            frames.append(pd.read_parquet(f, columns=usar))
+        else:
+            frames.append(pd.read_parquet(f))
+
+    return pd.concat(frames, ignore_index=True)

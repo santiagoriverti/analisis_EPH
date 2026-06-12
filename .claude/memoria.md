@@ -88,6 +88,24 @@ Hallazgo crítico documentado ahí: **quiebre de esquema en 4T2023**.
 
 Consultar `memoria_EPH.md` antes de escribir cualquier notebook de análisis.
 
+## Refactor memory-safe (2026-06-12) — IMPORTANTE
+
+Al correr el notebook 00 en Colab con los 36 trimestres, la sesión murió por RAM al
+concatenar todo en un solo DataFrame. Cambios en `src/data_loader.py`:
+- `build_panel(quarters=None)`: ahora procesa **un trimestre por vez**, guarda un parquet
+  por trimestre (`eph_T<Q><YY>.parquet`) y libera memoria con `del`. **Ya NO concatena en
+  RAM ni genera `eph_panel.parquet`** (un panel único de 36 trimestres × 235 cols
+  superaría además el límite de 100 MB de GitHub). Devuelve un resumen (lista de dicts).
+- Nueva función `load_panel(columns=None, quarters=None)`: lee los parquets por trimestre
+  y concatena, leyendo solo las columnas pedidas (maneja el quiebre de esquema: si una
+  columna no existe en un trimestre viejo, la saltea para ese archivo). Es la función que
+  deben usar los notebooks 01-05.
+- Import nuevo: `import pyarrow.parquet as pq` (para leer schemas por trimestre).
+
+El notebook 00 se actualizó en consecuencia: `build_panel(available)` devuelve un resumen
+(tabla de filas/columnas por trimestre); la verificación del merge y del esquema 4T2023
+usan `load_panel` con columnas acotadas.
+
 ## Notebook 00 actualizado (2026-06-12)
 
 `00_preparacion_bases.ipynb` quedó como el **notebook base/compilador** del proyecto.

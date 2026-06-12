@@ -323,6 +323,10 @@ Principales (todas 1=Sí/2=No salvo aclaración):
 
 ## 8. Notas operativas para los notebooks
 
+0. Los notebooks 01-05 NO leen los `.txt`/`.zip` directo: usan
+   `from src.data_loader import load_panel` y piden columnas/trimestres acotados
+   (`load_panel(columns=[...], quarters=[...])`). El notebook 00 ya compiló todo a
+   `data/processed/eph_T<Q><YY>.parquet` (un archivo por trimestre).
 1. Leer siempre con `sep=";"`, `encoding="latin1"` (ya implementado en `data_loader._read_csv`).
 2. Para estimaciones poblacionales, **multiplicar por el ponderador correcto** (§1).
 3. Para series temporales largas (pre y post 4T2023), usar solo el set de variables
