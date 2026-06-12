@@ -44,11 +44,24 @@ Cada notebook va a tener un botón "Abrir en Colab" una vez publicado.
 
 ## Cómo agregar una base nueva manualmente
 
-1. Descargar la base del trimestre desde el sitio del INDEC (formato `.txt` o `.xls`).
-2. Subirla a `data/raw/` con el nombre `usu_individual_<TyyTQQ>.txt` (o `.xls`),
-   por ejemplo `usu_individual_T424.txt` para el T4 2024.
-3. Los notebooks detectan automáticamente los archivos en `data/raw/` y los combinan
-   con lo que devuelva `pyeph`.
+1. Descargar del INDEC los archivos `usu_individual_TxQyy.txt` y `usu_hogar_TxQyy.txt`
+   (o `.xls`) del trimestre.
+2. Subirlos a `data/raw/` renombrados como `usu_individual_T<Q><YY>.txt` y
+   `usu_hogar_T<Q><YY>.txt`, por ejemplo `usu_individual_T424.txt` y
+   `usu_hogar_T424.txt` para el T4 2024.
+3. Agregar el trimestre a `QUARTERS` en `notebooks/00_preparacion_bases.ipynb` y correrlo.
+
+## Notebook de preparación de bases
+
+`notebooks/00_preparacion_bases.ipynb` es el punto de partida del proyecto: descarga
+las bases (pyeph + `data/raw/`), une individuos con hogares por `CODUSU` + `NRO_HOGAR`,
+y genera en `data/processed/`:
+
+- `eph_T<Q><YY>.parquet`: un archivo por trimestre, individuos+hogares ya unidos.
+- `eph_panel.parquet`: panel con todos los trimestres concatenados.
+
+El resto de los notebooks (demografía, laboral, ingresos, vivienda, educación) parten
+de estos archivos en lugar de descargar y unir las bases de nuevo.
 
 ## Setup local
 

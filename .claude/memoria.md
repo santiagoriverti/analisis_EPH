@@ -32,16 +32,33 @@ los trimestres recientes que `pyeph` no tiene todavía.
 - README con estructura del proyecto y tabla de notebooks (links a Colab pendientes).
 - Ningún notebook tiene contenido real todavía — son placeholders en la tabla del README.
 
+## Notebook 00 - Preparación de bases (creado 2026-06-12)
+
+`notebooks/00_preparacion_bases.ipynb`: clona el repo en Colab, instala `pyeph`,
+intenta cargar individuos+hogares para una lista de trimestres (`QUARTERS`), reporta
+los que faltan (para subir manualmente a `data/raw/`), y arma el panel uniendo
+individuos+hogares por `CODUSU`+`NRO_HOGAR` (`merge_individual_hogar` /
+`build_panel` en `src/data_loader.py`). Guarda `data/processed/eph_T<Q><YY>.parquet`
+por trimestre y `data/processed/eph_panel.parquet` con todo concatenado
+(+ columnas `ANIO`, `TRIMESTRE`).
+
+Los notebooks 01-05 deberían leer directamente `eph_panel.parquet` (o el parquet
+de un trimestre puntual) en lugar de volver a descargar/unir las bases.
+
 ## Próximos pasos
 
-1. Validar `pyeph.get()` con un trimestre real (chequear firma exacta de la función,
-   columnas devueltas, y el diccionario de variables EPH — CH04 sexo, CH06 edad,
-   ESTADO/CAT_OCUP para laboral, ITF/IPCF para ingresos, etc.).
-2. Implementar `01_demografia.ipynb` como notebook de referencia (carga + primeros
-   gráficos), validar que `load_eph` funcione en Colab.
-3. Subir badges "Abrir en Colab" al README una vez los notebooks estén en GitHub.
-4. Implementar el resto de notebooks (02-05) siguiendo el mismo patrón.
-5. Si se suben bases manuales a `data/raw/`, documentar qué trimestres y de dónde
+1. **Pendiente de validación end-to-end**: correr `00_preparacion_bases.ipynb` en
+   Colab al menos una vez para confirmar que `pyeph.get()` funciona con la firma
+   usada (`pyeph.get(data="eph", year=..., period=..., base_type=...)`) y que el
+   merge individuos+hogares por `CODUSU`+`NRO_HOGAR` da `validate="m:1"` sin error
+   (si pyeph devuelve columnas con otros nombres, ajustar `HOGAR_KEYS` en
+   `src/data_loader.py`).
+2. Una vez validado, comitear los `.parquet` generados en `data/processed/` (o
+   decidir si son muy pesados y conviene Git LFS / releases).
+3. Implementar `01_demografia.ipynb` leyendo `data/processed/eph_panel.parquet`.
+4. Subir badges "Abrir en Colab" al README una vez los notebooks estén en GitHub.
+5. Implementar el resto de notebooks (02-05) siguiendo el mismo patrón.
+6. Si se suben bases manuales a `data/raw/`, documentar qué trimestres y de dónde
    se descargaron (en este archivo o en `data/raw/README.md`).
 
 ## Notas sobre la EPH (para tener en cuenta al diseñar los notebooks)
