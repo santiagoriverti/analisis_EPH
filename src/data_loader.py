@@ -193,6 +193,8 @@ def _fix_mixed_type_columns(df: pd.DataFrame) -> pd.DataFrame:
 def build_panel(
     quarters: list[tuple[int, int]] | None = None,
     search_dirs: list[str] | None = None,
+    out_dir: str | None = None,
+    overwrite: bool = False,
 ) -> list[dict]:
     """Compila las bases EPH a un parquet por trimestre, de forma memory-safe.
 
@@ -200,20 +202,42 @@ def build_panel(
     CODUSU + NRO_HOGAR, agrega ANIO/TRIMESTRE, guarda el parquet y libera memoria).
     NO concatena todo en RAM: con 36 trimestres × ~235 columnas eso desborda la
     memoria de Colab. Además, un único panel combinado superaría el límite de 100 MB
-    de GitHub. Por eso se guarda un archivo por trimestre en `data/processed/`
-    (`eph_<TyyTQQ>.parquet`) y los notebooks lo leen con `load_panel()` eligiendo
-    solo las columnas/trimestres que necesiten.
+    de GitHub. Por eso se guarda un archivo por trimestre (`eph_<TyyTQQ>.parquet`) y
+    los notebooks lo leen con `load_panel()` eligiendo solo las columnas/trimestres
+    que necesiten.
 
-    Si `quarters` es None, usa todos los disponibles (`list_available_quarters`).
+    Parameters
+    ----------
+    quarters : list[tuple[int, int]], opcional
+        Trimestres a compilar. Si None, usa todos los disponibles.
+    search_dirs : list[str], opcional
+        Dónde buscar los .zip/.txt (por defecto [DRIVE_DIR, RAW_DIR]).
+    out_dir : str, opcional
+        Carpeta donde guardar los parquets. Por defecto `data/processed/` del repo
+        (efímero en Colab). Para persistir, pasar una carpeta de Drive, ej.
+        `/content/drive/MyDrive/carga_EPH/processed`.
+    overwrite : bool
+        Si False (default), saltea los trimestres cuyo parquet ya existe en `out_dir`
+        (útil para agregar solo trimestres nuevos sin recompilar todo).
 
     Devuelve un resumen (lista de dicts con year, period, filas, columnas, path).
     """
     if quarters is None:
         quarters = list_available_quarters(search_dirs)
 
-    os.makedirs(PROCESSED_DIR, exist_ok=True)
+    out_dir = out_dir or PROCESSED_DIR
+    os.makedirs(out_dir, exist_ok=True)
     resumen = []
     for year, period in quarters:
+        path = os.path.join(out_dir, f"eph_{_period_tag(year, period)}.parquet")
+
+        if not overwrite and os.path.exists(path):
+            resumen.append(
+                {"year": year, "period": period, "filas": None, "columnas": None,
+                 "path": path, "estado": "ya existía (salteado)"}
+            )
+            continue
+
         df_ind = load_eph(year, period, base_type="individual", search_dirs=search_dirs)
         df_hog = load_eph(year, period, base_type="hogar", search_dirs=search_dirs)
 
@@ -224,10 +248,10 @@ def build_panel(
         df["TRIMESTRE"] = period
         df = _fix_mixed_type_columns(df)
 
-        path = os.path.join(PROCESSED_DIR, f"eph_{_period_tag(year, period)}.parquet")
         df.to_parquet(path)
         resumen.append(
-            {"year": year, "period": period, "filas": len(df), "columnas": df.shape[1], "path": path}
+            {"year": year, "period": period, "filas": len(df), "columnas": df.shape[1],
+             "path": path, "estado": "compilado"}
         )
         del df
 
@@ -237,8 +261,9 @@ def build_panel(
 def load_panel(
     columns: list[str] | None = None,
     quarters: list[tuple[int, int]] | None = None,
+    out_dir: str | None = None,
 ) -> pd.DataFrame:
-    """Lee los parquets por trimestre de `data/processed/` y los concatena.
+    """Lee los parquets por trimestre y los concatena.
 
     Pensada para usarse en los notebooks 01-05. Para no desbordar la memoria de
     Colab, conviene pasar `columns` con solo las variables necesarias (y opcionalmente
@@ -251,11 +276,15 @@ def load_panel(
         ANIO y TRIMESTRE se incluyen siempre.
     quarters : list[tuple[int, int]], opcional
         Trimestres a incluir. Si None, usa todos los parquets presentes.
+    out_dir : str, opcional
+        Carpeta de donde leer los parquets. Por defecto `data/processed/`. Debe
+        coincidir con el `out_dir` usado en `build_panel` (ej. la carpeta de Drive).
     """
+    out_dir = out_dir or PROCESSED_DIR
     if quarters is None:
-        files = sorted(glob.glob(os.path.join(PROCESSED_DIR, "eph_T*.parquet")))
+        files = sorted(glob.glob(os.path.join(out_dir, "eph_T*.parquet")))
     else:
-        files = [os.path.join(PROCESSED_DIR, f"eph_{_period_tag(y, p)}.parquet") for y, p in quarters]
+        files = [os.path.join(out_dir, f"eph_{_period_tag(y, p)}.parquet") for y, p in quarters]
 
     cols = None
     if columns is not None:

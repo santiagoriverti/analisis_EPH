@@ -88,6 +88,17 @@ Hallazgo crítico documentado ahí: **quiebre de esquema en 4T2023**.
 
 Consultar `memoria_EPH.md` antes de escribir cualquier notebook de análisis.
 
+## Opción A: parquets persistentes en Drive (2026-06-12)
+
+Decisión: los parquets compilados se guardan en **Google Drive**
+(`/content/drive/MyDrive/carga_EPH/processed/`), no en el `data/processed/` efímero de
+Colab. Así persisten y los notebooks 01-05 los leen sin recompilar.
+- `build_panel(out_dir=..., overwrite=False)`: guarda en `out_dir`; con `overwrite=False`
+  saltea trimestres ya compilados (para agregar solo nuevos).
+- `load_panel(out_dir=...)`: lee de la misma carpeta.
+- El notebook 00 define `PROCESSED_DIR = "/content/drive/MyDrive/carga_EPH/processed"` y
+  lo pasa a ambas funciones.
+
 ## Fix coma decimal en montos (2026-06-12)
 
 Al correr el notebook 00 OK con los 36 trimestres, se vio que `IPCF` (y otros montos)
