@@ -249,12 +249,14 @@ def build_panel(
         df = _fix_mixed_type_columns(df)
 
         df.to_parquet(path)
+        print(f"  [{_period_tag(year, period)}] {len(df)} filas x {df.shape[1]} cols -> {path}")
         resumen.append(
             {"year": year, "period": period, "filas": len(df), "columnas": df.shape[1],
              "path": path, "estado": "compilado"}
         )
         del df
 
+    print(f"\nListo. Parquets en: {out_dir}")
     return resumen
 
 
