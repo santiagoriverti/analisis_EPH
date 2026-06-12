@@ -55,6 +55,23 @@ INDEC y subidos a Google Drive (carpeta `carga_EPH`).
   (T1-2026 se publica ~3 de agosto). El usuario está subiendo todos los `.zip` a Drive.
 - Ningún notebook de análisis (01-05) tiene contenido todavía.
 
+## Naming irregular dentro de los zips del INDEC (detectado 2026-06-12)
+
+Los 36 zips de `carga_EPH` (T1-2017 a T4-2025) no son uniformes en los nombres internos:
+- Mayúsculas/minúsculas variables (`usu_individual_t117.txt`, `Usu_individual_T417.txt`).
+- Algunos con doble extensión (`usu_individual_T222.txt.txt`).
+- **T4-2020 es un caso especial**: el zip trae
+  `EPH_usu_personas_4to.trim_2020.txt` (usa "personas" en vez de "individual") y
+  `EPH_usu_hogar_4to_trim2020_txt.txt` (sin el patrón `T420`).
+
+Se agregó en `src/data_loader.py`:
+- `_base_type_from_name`: ahora también reconoce `"personas"` como `"individual"`.
+- `_parse_period_from_name`: además del patrón `T<Q><YY>`, soporta el patrón
+  `<Q>to_trim<YYYY>` / `<Q>.trim_<YYYY>` (regex `_ORDINAL_TRIM_RE`) para casos como T4-2020.
+
+Con esto los 36 trimestres (T1-2017 a T4-2025, incluyendo T4-2020) deberían quedar
+disponibles en `list_available_quarters()`.
+
 ## Próximos pasos
 
 1. **Pendiente de validación end-to-end**: correr `00_preparacion_bases.ipynb` en

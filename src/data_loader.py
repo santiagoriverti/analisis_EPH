@@ -37,6 +37,10 @@ HOGAR_KEYS = ["CODUSU", "NRO_HOGAR"]
 
 _TAG_RE = re.compile(r"T(\d)(\d{2})", re.IGNORECASE)
 
+# Algunos zips (ej. T4-2020) no siguen el patrón usu_<base>_T<Q><YY>.txt y usan
+# nombres como "EPH_usu_personas_4to.trim_2020.txt" / "EPH_usu_hogar_4to_trim2020_txt.txt".
+_ORDINAL_TRIM_RE = re.compile(r"(\d)(?:ro|do|er|to|°)?[._]?trim[e]?[._]?(\d{4})", re.IGNORECASE)
+
 
 def _period_tag(year: int, period: int) -> str:
     """Convierte (2025, 4) -> 'T425' (formato usado en nombres de archivo del INDEC)."""
@@ -44,20 +48,32 @@ def _period_tag(year: int, period: int) -> str:
 
 
 def _parse_period_from_name(name: str) -> tuple[int, int] | None:
-    """Extrae (year, period) de un nombre de archivo, ej. 'usu_individual_T425.txt' -> (2025, 4)."""
+    """Extrae (year, period) de un nombre de archivo.
+
+    Soporta el patrón habitual `T<Q><YY>` (ej. 'usu_individual_T425.txt' -> (2025, 4))
+    y el patrón alternativo `<Q>to_trim<YYYY>` usado en algunos zips (ej.
+    'EPH_usu_personas_4to.trim_2020.txt' -> (2020, 4)).
+    """
     m = _TAG_RE.search(name)
-    if not m:
-        return None
-    period = int(m.group(1))
-    year = 2000 + int(m.group(2))
-    return year, period
+    if m:
+        period = int(m.group(1))
+        year = 2000 + int(m.group(2))
+        return year, period
+
+    m = _ORDINAL_TRIM_RE.search(name)
+    if m:
+        period = int(m.group(1))
+        year = int(m.group(2))
+        return year, period
+
+    return None
 
 
 def _base_type_from_name(name: str) -> str | None:
     lname = name.lower()
     if "hogar" in lname:
         return "hogar"
-    if "individual" in lname:
+    if "individual" in lname or "personas" in lname:
         return "individual"
     return None
 
