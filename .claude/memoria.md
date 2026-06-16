@@ -19,8 +19,13 @@ versionan en GitHub. Los notebooks 01-05 los leen con
 `load_panel(columns=[...], quarters=[...], out_dir=PROCESSED_DIR)` donde
 `PROCESSED_DIR = "/content/drive/MyDrive/carga_EPH/processed"`.
 
-**PRÓXIMO PASO:** correr/validar `01_demografia.ipynb` en Colab y, si está OK, seguir con
-`02_mercado_laboral.ipynb`.
+**PRÓXIMO PASO:** crear `02_mercado_laboral.ipynb` (empleo, desocupación, informalidad,
+subocupación).
+
+**`01_demografia.ipynb` VALIDADO en Colab (2026-06-12).** Corrió completo: pirámide
+coherente (base angosta, viudez femenina en 80+), tamaño hogar promedio 2.96, edad
+promedio ~35-36 con caída en 2020T2 (efecto pandemia en el operativo EPH), índice de
+masculinidad ~92→95. La copia Drive→local resolvió la desconexión FUSE.
 
 **GOTCHA Colab + Drive (importante para notebooks 01-05):** leer muchos parquets seguidos
 directo desde el mount de Drive tira `OSError [Errno 107] Transport endpoint is not
