@@ -43,7 +43,7 @@ y unir las bases de nuevo.
 | Notebook | Tema | Colab |
 |---|---|---|
 | `00_preparacion_bases.ipynb` | **Compilación de datos**: lee los `.zip` del INDEC desde Drive, une hogar+personas por `CODUSU`+`NRO_HOGAR` y guarda un parquet por trimestre en `data/processed/` | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/00_preparacion_bases.ipynb) |
-| `01_demografia.ipynb` | Estructura poblacional: edad, sexo, composición de hogares, región | (pendiente) |
+| `01_demografia.ipynb` | Estructura poblacional: pirámide edad×sexo, composición de hogares, región, evolución temporal | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/01_demografia.ipynb) |
 | `02_mercado_laboral.ipynb` | Empleo, desempleo, informalidad, subocupación | (pendiente) |
 | `03_ingresos_pobreza.ipynb` | Distribución del ingreso, pobreza, indigencia, brechas | (pendiente) |
 | `04_vivienda.ipynb` | Condiciones habitacionales, hacinamiento, acceso a servicios | (pendiente) |

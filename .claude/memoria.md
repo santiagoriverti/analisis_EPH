@@ -19,12 +19,20 @@ versionan en GitHub. Los notebooks 01-05 los leen con
 `load_panel(columns=[...], quarters=[...], out_dir=PROCESSED_DIR)` donde
 `PROCESSED_DIR = "/content/drive/MyDrive/carga_EPH/processed"`.
 
-**PRÓXIMO PASO (martes):** crear `notebooks/01_demografia.ipynb` — pirámide de población
-(edad `CH06` × sexo `CH04`), composición de hogares (`CH03`), distribución por región/
-aglomerado, evolución temporal. Todo **ponderado con `PONDERA`** y leyendo con `load_panel`.
-El usuario aún no eligió cortes específicos (preguntar: set estándar vs. indicadores puntuales).
-Seguir el patrón de setup del notebook 00 (clonar repo + montar Drive + `PROCESSED_DIR`).
-Recordar el quiebre 4T2023 al usar variables nuevas. Agregar el badge Colab en la tabla del README.
+**PRÓXIMO PASO:** correr/validar `01_demografia.ipynb` en Colab y, si está OK, seguir con
+`02_mercado_laboral.ipynb`.
+
+**HECHO (sesión 2026-06-12, parte 2):** creado `notebooks/01_demografia.ipynb` con el
+**set demográfico estándar** (lo eligió el usuario):
+1. Pirámide de población edad×sexo (grupos quinquenales, último trimestre, ponderado).
+2. Composición de hogares: parentesco (`CH03`) + tamaño del hogar (`IX_TOT`, 1 registro
+   por hogar tomando el jefe CH03==1).
+3. Población por región (`REGION`, último trimestre).
+4. Evolución temporal: edad promedio e índice de masculinidad por trimestre (toda la serie).
+Sigue el patrón de setup del notebook 00 (clonar repo + montar Drive + `PROCESSED_DIR`),
+usa `load_panel(columns=[...], quarters=[...], out_dir=PROCESSED_DIR)` y pondera con
+`PONDERA`. Detecta el último trimestre con `list_available_quarters()[-1]`. Badge Colab
+agregado en la tabla del README. **Falta validarlo corriéndolo en Colab.**
 
 **Cómo retomar en Colab:** abrir notebook desde el badge del README → Runtime → Restart and
 run all → esperar a que termine la sección 4 ("Listo. Parquets en:") antes de seguir.
