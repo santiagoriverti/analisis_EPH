@@ -19,8 +19,12 @@ versionan en GitHub. Los notebooks 01-05 los leen con
 `load_panel(columns=[...], quarters=[...], out_dir=PROCESSED_DIR)` donde
 `PROCESSED_DIR = "/content/drive/MyDrive/carga_EPH/processed"`.
 
-**PRÓXIMO PASO:** validar `04_vivienda.ipynb` y `05_educacion.ipynb` en Colab. Con eso los
-5 notebooks de análisis estarían completos.
+**PRÓXIMO PASO:** validar `05_educacion.ipynb` en Colab. Con eso los 5 notebooks de
+análisis estarían completos.
+
+**`04_vivienda.ipynb` VALIDADO en Colab (2026-06-12).** Sin agua por cañería ~2-3%, sin
+cloaca ~25-31% (baja de 30% a 27% en la serie), hacinamiento crítico ~2% estable. Todo
+coherente con INDEC.
 
 **HECHO: `04_vivienda.ipynb` y `05_educacion.ipynb` creados.**
 - 04 (base Hogar, 1 registro por hogar con `CH03==1`, helper `cargar_hogares` que fuerza
