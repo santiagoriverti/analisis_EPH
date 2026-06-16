@@ -22,6 +22,13 @@ versionan en GitHub. Los notebooks 01-05 los leen con
 **PRÓXIMO PASO:** correr/validar `01_demografia.ipynb` en Colab y, si está OK, seguir con
 `02_mercado_laboral.ipynb`.
 
+**GOTCHA Colab + Drive (importante para notebooks 01-05):** leer muchos parquets seguidos
+directo desde el mount de Drive tira `OSError [Errno 107] Transport endpoint is not
+connected` (FUSE se desconecta). **Solución aplicada en el notebook 01:** en el setup,
+copiar UNA vez los parquets de `DRIVE_PROCESSED` (`/content/drive/MyDrive/carga_EPH/processed`)
+a disco local (`PROCESSED_DIR = "/content/processed_local"`) con `shutil.copy`, y pasar ese
+`PROCESSED_DIR` local a `load_panel`. Los notebooks 02-05 deben usar el mismo patrón.
+
 **HECHO (sesión 2026-06-12, parte 2):** creado `notebooks/01_demografia.ipynb` con el
 **set demográfico estándar** (lo eligió el usuario):
 1. Pirámide de población edad×sexo (grupos quinquenales, último trimestre, ponderado).
