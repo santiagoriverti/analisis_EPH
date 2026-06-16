@@ -19,8 +19,23 @@ versionan en GitHub. Los notebooks 01-05 los leen con
 `load_panel(columns=[...], quarters=[...], out_dir=PROCESSED_DIR)` donde
 `PROCESSED_DIR = "/content/drive/MyDrive/carga_EPH/processed"`.
 
-**PRÓXIMO PASO:** validar `03_ingresos_pobreza.ipynb` en Colab; si OK seguir con
-`04_vivienda.ipynb`.
+**PRÓXIMO PASO:** validar `04_vivienda.ipynb` y `05_educacion.ipynb` en Colab. Con eso los
+5 notebooks de análisis estarían completos.
+
+**HECHO: `04_vivienda.ipynb` y `05_educacion.ipynb` creados.**
+- 04 (base Hogar, 1 registro por hogar con `CH03==1`, helper `cargar_hogares` que fuerza
+  numérico): tipo de vivienda (`IV1`) y tenencia (`II7`); acceso a agua (`IV6`) y desagüe
+  (`IV11`); hacinamiento (`IX_TOT`/`II1`, crítico >3 pers/cuarto); evolución del déficit
+  habitacional (sin agua por cañería, sin cloaca, hacinamiento crítico).
+- 05 (base Personas, helper `cargar` que fuerza numérico): nivel educativo (`NIVEL_ED`)
+  población 25+; asistencia (`CH10`) por grupo de edad; público/privado (`CH11`);
+  evolución de % con secundario completo o más y tasa de analfabetismo (`CH09`).
+Ambos usan el patrón Drive→local y `pd.to_numeric`. Badges Colab en README. **Falta validarlos.**
+
+**`03_ingresos_pobreza.ipynb` VALIDADO en Colab (2026-06-12).** Gini 0.41-0.47 (rango
+oficial), D10/D1 ~17.7 en T4-2025, top10 ~32.5%, bottom40 ~15%. Capta pico de desigualdad
+2020T2 (Gini 0.451) y repunte 2024T1 (0.467, salto inflacionario). Fix de coerción
+numérica funcionó.
 
 **HECHO: `03_ingresos_pobreza.ipynb` creado.** El usuario eligió enfoque
 **distribución+deciles SIN línea de pobreza** (evita cargar CBA/CBT y deflactar). Usa
