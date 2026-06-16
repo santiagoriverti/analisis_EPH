@@ -19,8 +19,12 @@ versionan en GitHub. Los notebooks 01-05 los leen con
 `load_panel(columns=[...], quarters=[...], out_dir=PROCESSED_DIR)` donde
 `PROCESSED_DIR = "/content/drive/MyDrive/carga_EPH/processed"`.
 
-**PRÓXIMO PASO:** validar `02_mercado_laboral.ipynb` en Colab; si OK seguir con
-`03_ingresos_pobreza.ipynb`.
+**PRÓXIMO PASO:** crear `03_ingresos_pobreza.ipynb`.
+
+**`02_mercado_laboral.ipynb` VALIDADO en Colab (2026-06-12).** Números coinciden con
+INDEC: desocupación pico 2020T2 (13.1%), mínimo 2023T3-T4 (5.7%), repunte 2024-25 ~6-8%;
+actividad ~45-49%, empleo ~41-46%, subocupación ~10-13% (pico 2020T4 15.1%); informalidad
+41-43% desde 2023T4. El filtro del quiebre 4T2023 funcionó OK.
 
 **HECHO: `02_mercado_laboral.ipynb` creado (set laboral completo).** 5 secciones:
 (1) tasas actividad/empleo/desocupación serie 2017-2025 — definiciones INDEC: PEA=ESTADO∈{1,2},
