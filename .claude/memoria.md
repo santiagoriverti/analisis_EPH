@@ -19,7 +19,17 @@ versionan en GitHub. Los notebooks 01-05 los leen con
 `load_panel(columns=[...], quarters=[...], out_dir=PROCESSED_DIR)` donde
 `PROCESSED_DIR = "/content/drive/MyDrive/carga_EPH/processed"`.
 
-**PRÓXIMO PASO:** crear `03_ingresos_pobreza.ipynb`.
+**PRÓXIMO PASO:** validar `03_ingresos_pobreza.ipynb` en Colab; si OK seguir con
+`04_vivienda.ipynb`.
+
+**HECHO: `03_ingresos_pobreza.ipynb` creado.** El usuario eligió enfoque
+**distribución+deciles SIN línea de pobreza** (evita cargar CBA/CBT y deflactar). Usa
+`IPCF` + ponderador `PONDIH`, filtra `IPCF`>=0 y notna. Funciones propias
+`weighted_quantile` y `weighted_gini` (Lorenz). 5 secciones: distribución IPCF último
+trim, participación por decil + ratio D10/D1, Gini serie 2017-2025, evolución
+ratio D10/D1 + share top10/bottom40. Métricas unit-free (no necesitan deflactar). Badge
+Colab en README. **Falta validarlo en Colab.** (Extensión futura posible: pobreza por
+canastas CBA/CBT.)
 
 **`02_mercado_laboral.ipynb` VALIDADO en Colab (2026-06-12).** Números coinciden con
 INDEC: desocupación pico 2020T2 (13.1%), mínimo 2023T3-T4 (5.7%), repunte 2024-25 ~6-8%;
