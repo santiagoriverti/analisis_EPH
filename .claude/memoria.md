@@ -49,6 +49,13 @@ coherente (base angosta, viudez femenina en 80+), tamaño hogar promedio 2.96, e
 promedio ~35-36 con caída en 2020T2 (efecto pandemia en el operativo EPH), índice de
 masculinidad ~92→95. La copia Drive→local resolvió la desconexión FUSE.
 
+**GOTCHA dtypes al concatenar (notebooks 01-05):** al unir trimestres con `load_panel`,
+si una columna numérica viene como texto en ALGÚN trimestre, toda la columna queda como
+`object` → comparaciones tipo `col >= 0` fallan (`'>=' not supported between str and int`).
+Pasó con `IPCF`/`PONDIH` en el notebook 03. **Solución:** `pd.to_numeric(col, errors="coerce")`
+antes de filtrar/operar (en el 03 está encapsulado en `cargar_ingresos()`). Aplicar el mismo
+patrón en 04/05 con cualquier columna numérica que se compare/agregue.
+
 **GOTCHA Colab + Drive (importante para notebooks 01-05):** leer muchos parquets seguidos
 directo desde el mount de Drive tira `OSError [Errno 107] Transport endpoint is not
 connected` (FUSE se desconecta). **Solución aplicada en el notebook 01:** en el setup,
