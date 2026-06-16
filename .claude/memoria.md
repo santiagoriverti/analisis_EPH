@@ -19,8 +19,16 @@ versionan en GitHub. Los notebooks 01-05 los leen con
 `load_panel(columns=[...], quarters=[...], out_dir=PROCESSED_DIR)` donde
 `PROCESSED_DIR = "/content/drive/MyDrive/carga_EPH/processed"`.
 
-**PRÓXIMO PASO:** crear `02_mercado_laboral.ipynb` (empleo, desocupación, informalidad,
-subocupación).
+**PRÓXIMO PASO:** validar `02_mercado_laboral.ipynb` en Colab; si OK seguir con
+`03_ingresos_pobreza.ipynb`.
+
+**HECHO: `02_mercado_laboral.ipynb` creado (set laboral completo).** 5 secciones:
+(1) tasas actividad/empleo/desocupación serie 2017-2025 — definiciones INDEC: PEA=ESTADO∈{1,2},
+actividad=PEA/total, empleo=ocupados/total, desocup=desocup/PEA; (2) subocupación
+(INTENSI==1)/PEA; (3) categoría ocupacional (CAT_OCUP) de ocupados, último trimestre;
+(4) informalidad (EMPLEO==2 / ocupados) **solo desde 2023T4** (quiebre esquema, filtra
+`(y,p) >= (2023,4)`). Usa el patrón de copia Drive→local en el setup. Badge Colab en README.
+**Falta validarlo en Colab.**
 
 **`01_demografia.ipynb` VALIDADO en Colab (2026-06-12).** Corrió completo: pirámide
 coherente (base angosta, viudez femenina en 80+), tamaño hogar promedio 2.96, edad
