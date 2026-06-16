@@ -19,8 +19,19 @@ versionan en GitHub. Los notebooks 01-05 los leen con
 `load_panel(columns=[...], quarters=[...], out_dir=PROCESSED_DIR)` donde
 `PROCESSED_DIR = "/content/drive/MyDrive/carga_EPH/processed"`.
 
-**PRÓXIMO PASO:** validar `05_educacion.ipynb` en Colab. Con eso los 5 notebooks de
-análisis estarían completos.
+**PROYECTO COMPLETO (2026-06-12): los 6 notebooks validados en Colab.**
+00 (compilador) + 01 demografía + 02 laboral + 03 ingresos + 04 vivienda + 05 educación.
+Todos leen los parquets desde Drive (vía copia local), ponderados, con datos coherentes
+con INDEC. README con badges Colab de los 6 en la tabla.
+
+**`05_educacion.ipynb` VALIDADO en Colab (2026-06-12).** Secundario completo o más (25+)
+de ~56% (2017) a ~64% (2025), creciente; analfabetismo ~0.7-1.2%, bajo. Coherente.
+
+**POSIBLES EXTENSIONES FUTURAS (si el usuario quiere seguir):**
+- Notebook de cruces (ej. ingreso × educación, informalidad × región).
+- Pobreza por canastas CBA/CBT (requiere cargar valores INDEC por período/región + deflactar).
+- README más vistoso / portada con resumen de hallazgos.
+- Cuando salga T1-2026 (~3 ago): subir su .zip a carga_EPH y correr el 00 con overwrite=False.
 
 **`04_vivienda.ipynb` VALIDADO en Colab (2026-06-12).** Sin agua por cañería ~2-3%, sin
 cloaca ~25-31% (baja de 30% a 27% en la serie), hacinamiento crítico ~2% estable. Todo
