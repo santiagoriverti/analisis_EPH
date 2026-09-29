@@ -9,9 +9,9 @@
 **Estado: proyecto al día con T1-2026. 7 notebooks (00-06) validados en Colab con 37
 trimestres (T1-2017 → T1-2026).** Árbol git limpio, todo pusheado a `main`.
 
-⚠ **Pendiente inmediato:** el 06 se reorganizó (ver punto 4) y se testeó local con datos
-sintéticos + CSV real, pero **falta correrlo en Colab**. Esperado: mismos números que la v3
-(el índice no cambió), sección 12 con todo ✓, 3 archivos en `carga_EPH/resultados/`.
+El 06 reorganizado (punto 4) está **validado en Colab** (2026-09-29): números idénticos a
+la v3, sección 12 con los 5 chequeos ✓ (hogares T126 15.447 vs mediana 16.815; pandemia
+73,8; valle 23,4), 3 archivos exportados.
 
 Qué se hizo en la sesión 2026-09-29:
 1. **T1-2026 incorporado.** Zip con nombres internos regulares; el 00 (ahora
@@ -186,4 +186,4 @@ empleo = ocupados/total; desocupación = desocupados/PEA; subocupación = `INTEN
   v1 falló chequeo 2020 (efecto composición) → v2 corregida → v3 suma despidos
   (`PP11O∈{1,7}`), pluriempleo descartado; v3 validada. Generador versionado en `tools/`.
   Re-corrida verificada (idéntica). 06 reorganizado: lectura automática, promedios
-  anuales, controles de calidad, exportación anual/resumen, candidatas a Anexo A.
+  anuales, controles de calidad, exportación anual/resumen, candidatas a Anexo A; validado en Colab.
