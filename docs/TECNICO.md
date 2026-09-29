@@ -88,7 +88,20 @@ Variables del esquema nuevo (primer dato en 2023T4): `EMPLEO`, `SECTOR`, `P_DECC
 - Métricas de ingreso usadas son unit-free (Gini, shares, ratios) → no requieren deflactar.
 - Deciles en 03: cuantiles ponderados (`weighted_quantile`); ver pendiente de empates.
 
-## 6. Entorno
+## 6. Notebook 06 — termómetro
+
+- Carga personas (`ESTADO, INTENSI, PP10A, PP02E, PP03J, PP07H, CAT_OCUP, EMPLEO, PONDERA`) y
+  hogares (`CH03, V6, V7, V13-V17, V19_A, V19_B, PONDERA`, filtrando `CH03==1`) con
+  `load_panel` + `pd.to_numeric`; columnas inexistentes en todos los trimestres → NaN.
+- `ind_personas` / `ind_hogares`: indicadores en % por `(ANIO, TRIMESTRE)`.
+- `DIMENSIONES`: dict dimensión → {indicador: signo} (+1 = más alto es peor, -1 = invertido).
+  Para agregar/quitar un indicador del índice basta con editar ese dict (y su cálculo).
+- `percentil_orientado(s, signo)`: rank promedio sobre `signo * s.round(1)` → 0-100.
+- Termómetro = media de las dimensiones; cada dimensión = media de sus percentiles.
+- Los percentiles son relativos a la historia disponible: **al sumar trimestres, los valores
+  históricos del índice pueden moverse levemente** (es esperable, no un bug).
+
+## 7. Entorno
 
 - Colab: no requiere instalar nada extra (pandas, pyarrow, matplotlib, seaborn vienen).
 - Local: `pip install -r requirements.txt` (pandas, numpy, matplotlib, seaborn, pyarrow,

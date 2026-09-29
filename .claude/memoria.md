@@ -6,6 +6,33 @@
 
 ## ⭐ HANDOFF (última sesión: 2026-09-29)
 
+**NUEVO (fin de sesión 2026-09-29): `06_termometro.ipynb` creado, FALTA VALIDARLO EN COLAB.**
+Índice compuesto de "malestar" 0-100 (0 = mejor trimestre de la serie, 100 = peor), etapa 1
+sin variables monetarias. 3 dimensiones con peso 1/3 cada una:
+- A. Cantidad de empleo: desocupación, tasa de empleo (invertida), desocupación >1 año
+  (`PP10A==5`, % PEA), desalentados (`ESTADO==3 & PP02E==3`, % PEA).
+- B. Calidad: subocupación (`INTENSI==1`), ocupados que buscan otro empleo (`PP03J==1`, % PEA),
+  asalariados sin descuento jubilatorio (`CAT_OCUP==3 & PP07H==2`).
+- C. Estrés de hogares (jefe `CH03==1`, % hogares): `V13` ahorros, `V14` préstamos
+  familiares, `V17` vendieron pertenencias, `V6` alimentos gobierno/instituciones, `V7`
+  alimentos familiares, `V19_A|V19_B` niños <10 aportan dinero.
+- Complementarios fuera del índice: `EMPLEO==2` (solo ≥2023T4), `V15` préstamos bancarios,
+  `V16` cuotas/fiado (señal ambigua: crédito ≠ estrés).
+- Normalización: percentil histórico orientado de cada indicador, **redondeado a 1 decimal
+  antes de rankear** (evita que el ruido en indicadores ~0,1% los lleve a 0/100).
+  Franjas: ≤33 Templado, ≤66 Tibio, >66 Fiebre. También media móvil 4T y var. interanual.
+- Exporta `carga_EPH/resultados/termometro_EPH.csv` (`;`, decimal `,`, utf-8-sig).
+- Códigos verificados contra el PDF oficial `EPH_registro_4T2025.pdf` (copia local en
+  `Desktop/INECO/Emancipacion/`). Probado localmente con 8 trimestres sintéticos
+  (remuestreo de T4-2025 xlsx): corre de punta a punta. Valores reales T4-2025:
+  asalariados sin descuento ≈36%, desocup. >1 año ≈2,2% PEA, gastaron ahorros ≈33%,
+  préstamos familiares ≈17%, vendieron pertenencias ≈11%, alimentos gobierno ≈7-9%.
+- **Qué validar en Colab:** que 2020T2-T3 aparezca como pico de "fiebre" y 2023T3-T4 como
+  zona baja; revisar si algún indicador se comporta raro (quiebre de esquema, `PP07H`).
+- **Etapa 2 (pendiente):** ingresos reales (`P21`, `IPCF` deflactados por IPC, ver skill
+  `indec-api`) y pobreza/indigencia por canastas CBA/CBT.
+
+
 **Estado: proyecto completo y al día con T1-2026.** 6 notebooks validados en Colab con
 **37 trimestres (T1-2017 → T1-2026)**. Árbol git limpio, todo pusheado a `main`.
 
@@ -77,7 +104,7 @@ Total panel previo a T126: 1.825.881 filas (36 trimestres).
 - Sin dependencia de `pyeph`. Toda la lógica de carga en `src/data_loader.py`.
 - Detalle de funciones, gotchas y decisiones: [`docs/TECNICO.md`](../docs/TECNICO.md).
 
-## Notebooks (todos validados en Colab)
+## Notebooks (00-05 validados en Colab; 06 pendiente)
 
 | NB | Contenido | Base / ponderador |
 |---|---|---|
@@ -87,6 +114,7 @@ Total panel previo a T126: 1.825.881 filas (36 trimestres).
 | 03 | IPCF: percentiles, participación por decil, D10/D1, Gini (Lorenz), top10/bottom40. Sin línea de pobreza (decisión del usuario) | Personas / `PONDIH` |
 | 04 | Tipo de vivienda (`IV1`), tenencia (`II7`), agua (`IV6`), desagüe (`IV11`), hacinamiento (`IX_TOT`/`II1`, crítico >3) | Hogar (jefe `CH03==1`) / `PONDERA` |
 | 05 | `NIVEL_ED` 25+, asistencia (`CH10`), público/privado (`CH11`), analfabetismo (`CH09`) | Personas / `PONDERA` |
+| 06 | Termómetro 0-100 (ver HANDOFF). **Pendiente de validar en Colab** | Personas + Hogar / `PONDERA` |
 
 Definiciones INDEC usadas en 02: PEA = `ESTADO∈{1,2}`; actividad = PEA/total;
 empleo = ocupados/total; desocupación = desocupados/PEA; subocupación = `INTENSI==1`/PEA.
@@ -108,4 +136,4 @@ empleo = ocupados/total; desocupación = desocupados/PEA; subocupación = `INTEN
   Fixes: copia Drive→local (FUSE), `pd.to_numeric` en `IPCF`/`PONDIH` (03).
 - **2026-06-16**: `CLAUDE.md` apuntando a la memoria.
 - **2026-09-29**: incorporado T1-2026 (ver HANDOFF); documentación reorganizada
-  (`docs/TECNICO.md`, README con setup para nueva PC).
+  (`docs/TECNICO.md`, README con setup para nueva PC). Creado `06_termometro.ipynb`.
