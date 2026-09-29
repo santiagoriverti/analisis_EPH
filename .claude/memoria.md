@@ -65,8 +65,10 @@ Dimensiones 2026T1: A 34,7 · B 66,3 · C 78,9. Lectura: hay empleo pero más pr
 (asalariados sin descuento 37,9% = máximo de la serie; asalariados registrados 20,0% de la
 población, percentil 86) y los hogares usan reservas (préstamos familiares p90, gastaron
 ahorros p89, vendieron pertenencias p81): estrés en el nivel más alto fuera de la pandemia.
-Promedio anual (v2, referencia): 2017 30,8 · 2018 44,3 · 2019 65,9 · 2020 72,1 · 2021 65,2
-· 2022 43,5 · 2023 26,4 · 2024 46,6 · 2025 52,5.
+Promedio anual (v3): 2017 29,9 · 2018 43,8 · 2019 65,9 · 2020 72,3 · 2021 64,4 · 2022 41,6
+· 2023 26,2 · 2024 49,0 · 2025 54,3 · 2026 (solo T1) 60,0. 2026T1 es el 10.º trimestre más
+alto de 37 (todos los superiores son 2019T2-2021T2). Estados: 21 Tibio, 8 Templado, 8 Fiebre.
+Re-corrida del 06 el 2026-09-29 (CSV 37 × 40 con `trimestre`) idéntica a la validación.
 Exporta `carga_EPH/resultados/termometro_EPH.csv` (37 × 39; `;`, decimal `,`, utf-8-sig).
 
 **Historia de versiones (por qué está armado así):**
