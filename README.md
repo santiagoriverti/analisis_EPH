@@ -30,6 +30,8 @@ analisis_EPH/
 │   ├── raw/          # Bases EPH descargadas manualmente (txt/xls del INDEC)
 │   └── processed/    # Datasets intermedios/limpios generados por los notebooks
 ├── src/              # Funciones compartidas (carga de datos, armonización, utils)
+├── tools/            # Generadores (ej. gen_06_termometro.py crea el notebook 06)
+├── docs/             # Documentación técnica (TECNICO.md)
 └── .claude/          # Memoria/contexto del proyecto para sesiones de Claude Code
 ```
 
@@ -48,7 +50,7 @@ y unir las bases de nuevo.
 | `03_ingresos_pobreza.ipynb` | Distribución del ingreso (IPCF), deciles, Gini, brechas D10/D1 | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/03_ingresos_pobreza.ipynb) |
 | `04_vivienda.ipynb` | Tipo de vivienda, tenencia, servicios (agua/cloaca), hacinamiento, déficit | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/04_vivienda.ipynb) |
 | `05_educacion.ipynb` | Nivel educativo, asistencia escolar, público/privado, analfabetismo | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/05_educacion.ipynb) |
-| `06_termometro.ipynb` | **Termómetro de la economía de los hogares**: índice compuesto 0-100 (cantidad y calidad del empleo + estrategias de supervivencia de los hogares), percentil histórico, evolución, mapa de calor y CSV en Drive | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/06_termometro.ipynb) |
+| `06_termometro.ipynb` | **Termómetro de la economía de los hogares**: índice de malestar 0-100 (cantidad de empleo y despidos, calidad del empleo, estrategias de supervivencia de los hogares), percentil histórico, evolución, mapa de calor, diagnóstico de variables candidatas y CSV en Drive | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/06_termometro.ipynb) |
 
 **Cobertura actual:** 37 trimestres, **T1-2017 → T1-2026** (todos los notebooks validados en Colab).
 
@@ -82,8 +84,31 @@ df = load_panel(columns=["CH06", "CH04", "REGION", "PONDERA"])  # ej. demografí
 3. Volver a correr `notebooks/00_preparacion_bases.ipynb`: detecta automáticamente
    todos los trimestres presentes en `carga_EPH` y compila solo el nuevo; no hace falta
    editar nada en el código.
-4. Recién después re-correr los notebooks 01-05: toman el último trimestre solos.
+4. Recién después re-correr los notebooks 01-06: toman el último trimestre solos.
    (Si se corren antes del 00, fallan porque el parquet del trimestre nuevo no existe.)
+
+## Termómetro de la economía de los hogares (notebook 06)
+
+Índice trimestral de **malestar** de 0 (mejor trimestre de la serie) a 100 (peor), con
+tres dimensiones de igual peso:
+
+| Dimensión | Indicadores |
+|---|---|
+| Cantidad de empleo | desocupación, tasa de empleo, desocupación de más de 1 año, desocupados por despido o renuncia forzada |
+| Calidad del empleo | subocupación, ocupados que buscan otro empleo, asalariados sin descuento jubilatorio, tasa de asalariados registrados |
+| Estrés de los hogares | gastaron ahorros, préstamos de familiares, vendieron pertenencias, recibieron alimentos (gobierno/instituciones o familiares) |
+
+Cada indicador se ubica en su percentil histórico (2017 en adelante). Franjas: Templado
+(≤33), Tibio (≤66), Fiebre (>66). No usa ingresos ni pobreza (no requiere deflactar).
+
+**Resultados (T1-2017 → T1-2026):** máximo en 2020T4 (82), mínimo en 2017T4 (20) y
+2023T3 (22). **2026T1 = 60 (Tibio), +11 puntos interanual**: la cantidad de empleo está en
+valores intermedios (35), pero la calidad del empleo (66) y el estrés de los hogares (79)
+están en niveles altos; los asalariados sin descuento jubilatorio (37,9%) son el máximo de
+la serie.
+
+El notebook se genera con `python tools/gen_06_termometro.py` (no editar el `.ipynb` a
+mano). Detalle metodológico en [`docs/TECNICO.md`](docs/TECNICO.md) §6.
 
 ## Continuar en otra PC
 

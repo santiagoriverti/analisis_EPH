@@ -342,3 +342,27 @@ Principales (todas 1=Sí/2=No salvo aclaración):
 5. Edad = `CH06`; sexo = `CH04`; nivel educativo = `NIVEL_ED`; condición de actividad =
    `ESTADO`; categoría ocupacional = `CAT_OCUP`; informalidad = `EMPLEO`/`SECTOR`;
    ingreso del hogar = `ITF`/`IPCF` (+ deciles).
+
+---
+
+## 9. Variables usadas en el termómetro (notebook 06) — verificadas contra el PDF oficial
+
+Códigos confirmados en `EPH_registro_4T2025.pdf` (2026-09-29). Niveles de T4-2025 como referencia.
+
+| Variable | Pregunta / códigos | Uso en el termómetro |
+|---|---|---|
+| `PP10A` | Cuánto hace que busca trabajo: 1 <1 mes, 2 1-3 meses, 3 3-6 meses, 4 6-12 meses, **5 más de 1 año** | Desocupación >1 año (`ESTADO==2 & PP10A==5`, % PEA; ~2,2%) |
+| `PP11O` | Razón por la que dejó el trabajo (solo ex-asalariados): **1 despido/cierre**, 2 retiro voluntario sector público, 3 jubilación, 4 fin de temporario/estacional, 5 le pagaban poco, 6 malas condiciones, **7 renuncia obligada/pactada**, 8 otras laborales, 9 personales; 0 = no corresponde | Despidos (`PP11O∈{1,7}`, % PEA; ~1,1%). Ex-cuentapropistas: ver `PP11L` (1 = falta de clientes) |
+| `PP02E` | Por qué no buscó: 1 suspendido, 2 trabajo asegurado, **3 se cansó de buscar**, 4 poco trabajo en la época, 5 otras | Desalentados (`ESTADO==3 & PP02E==3`), complementario (~0,1-0,2%) |
+| `PP03C` | 1 un solo empleo, **2 más de un empleo** | Pluriempleo, complementario (~10-12% de ocupados; procíclico) |
+| `PP03J` | Aparte de su trabajo, ¿buscó otro empleo? 1 sí, 2 no, 9 Ns/Nr | Ocupados que buscan otro empleo (% PEA; ~16%) |
+| `PP07H` | ¿Tiene descuento jubilatorio? **1 sí, 2 no** (asalariados) | Asalariados sin descuento (% asalariados; ~36-38%) y asalariados registrados (% población; ~20%) |
+| `PP07C` | ¿El empleo tiene tiempo de finalización? 1 sí (changa, transitorio), 2 no | No usado (candidata; ~8,5% de asalariados) |
+| `INTENSI` | 1 subocupado, 2 pleno, 3 sobreocupado, 4 no trabajó en la semana | Subocupación (`==1`, % PEA) |
+| `V13` / `V14` / `V15` / `V16` / `V17` | Últimos 3 meses: gastaron ahorros / préstamo de familiares o amigos / préstamo de bancos o financieras / compran en cuotas o al fiado / vendieron pertenencias (1 sí, 2 no) | V13, V14, V17 en el índice; V15, V16 complementarios (señal ambigua) |
+| `V6` / `V7` | Mercadería, ropa o alimentos del gobierno, iglesias o escuelas / de familiares o vecinos (1 sí, 2 no) | En el índice (~7% / ~8% de hogares) |
+| `V19_A` / `V19_B` | Menores de 10 años aportan dinero trabajando / pidiendo (1 sí, 2 no) | Complementario (~0,0-0,1%) |
+
+Todas estas variables existen en ambos esquemas (antes y después de 4T2023), salvo
+`EMPLEO`/`SECTOR`. La distribución de `PP11O` y `PP03C` es estable entre esquemas
+(verificado en la sección 10 del notebook 06).

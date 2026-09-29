@@ -15,7 +15,8 @@ Proyecto de notebooks (Google Colab) de análisis de la EPH del INDEC.
 ## Estado (2026-09-29)
 
 7 notebooks validados en Colab (00 compilador + 01 demografía, 02 laboral, 03 ingresos,
-04 vivienda, 05 educación, 06 termómetro 0-100) con **37 trimestres T1-2017 → T1-2026**.
+04 vivienda, 05 educación, 06 termómetro 0-100, versión v3) con **37 trimestres
+T1-2017 → T1-2026**. Pendientes e ideas en el HANDOFF de la memoria.
 Datos: `.zip` del INDEC en Google Drive (`carga_EPH`), compilados a parquets por
 trimestre en `carga_EPH/processed`. Los datos NO están en el repo: viven en el Drive del
 usuario; el código corre en Colab, así que cambiar de PC solo requiere clonar el repo.
@@ -29,3 +30,8 @@ usuario; el código corre en Colab, así que cambiar de PC solo requiere clonar 
 - Las bases pesadas de EPH no se commitean (`data/raw/*.zip` ignorado).
 - Actualizar `.claude/memoria.md` (HANDOFF + historial) al finalizar cada sesión.
 - Editar notebooks vía JSON (`json.load`/`json.dump`), no con `sed` sobre el `.ipynb`.
+- **El notebook 06 se genera** con `tools/gen_06_termometro.py`: editar el script y
+  regenerar (`python tools/gen_06_termometro.py`), nunca el `.ipynb` directo.
+- No hay datos EPH en el repo ni en la PC (salvo copias sueltas): los resultados reales
+  salen de correr en Colab; el usuario pega las salidas en el chat.
+- En Windows, evitar heredocs largos con backticks en bash: escribir scripts a archivo.
