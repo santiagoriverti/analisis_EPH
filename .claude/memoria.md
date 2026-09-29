@@ -31,7 +31,12 @@ CSV exportado en Drive `carga_EPH/resultados/termometro_EPH.csv` (37 × 36).
 - **Ampliado a `PP11O∈{1,7}`** (a pedido del usuario): se suma el código 7 "renuncia
   obligada/pactada" (despido encubierto, ~1,5-2,2% de los desocupados). Indicador renombrado
   "Desocupados por despido (incl. renuncia forzada)" (cambia el nombre de la columna del CSV).
-- **Pendiente:** re-correr el 06 en Colab para confirmar los valores v3 (esperado 2020T2 ≈ 66).
+- **v3 VALIDADA en Colab (2026-09-29).** Indicador despidos (1+7): 0,5-1,8% PEA; pandemia
+  1,62 vs valle 0,65; autocorr 0,74; Spearman c/desocupación 0,82 (<0,85); sin estacionalidad
+  T1 (1,25 vs 1,21). Termómetro v3: máx 2020T4 82,1, mín 2017T4 20,4, valle 2023T3 22,4;
+  2020T2 65,7 (Tibio, a 0,3 del umbral de Fiebre, aceptado); 2024T1 44,2 (dimensión A
+  43,8: capta los despidos de inicio de 2024); **2026T1 60,0 (Tibio), +11,0 i.a.**, media
+  móvil 4T 57,0; dimensiones 2026T1: A 34,7 · B 66,3 · C 78,9. CSV 37 × 39.
 - Notas `PP11O`: solo ex-asalariados (ex-cuentapropistas por falta de clientes = `PP11L==1`);
   código 7 "renuncia obligada/pactada" = despido encubierto (no incluido, posible ampliación);
   código 4 fin de temporario (estacional, excluido).
