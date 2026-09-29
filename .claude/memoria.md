@@ -1,305 +1,111 @@
 # Memoria del proyecto: analisis_EPH
 
-## ⭐ HANDOFF (última sesión: 2026-09-29) — T1-2026 agregado
+> Documento de continuidad entre sesiones de Claude Code (y entre PCs). Leer primero el
+> bloque **HANDOFF**. Detalle técnico en [`docs/TECNICO.md`](../docs/TECNICO.md);
+> diccionario de variables en [`memoria_EPH.md`](memoria_EPH.md).
 
-- El usuario subió `EPH_usu_1_Trim_2026_txt.zip` a Drive `carga_EPH` (37 trimestres: T1-2017 → T1-2026).
-- Validado localmente (copia en Downloads): nombres internos regulares (`usu_hogar_T126.txt`,
-  `usu_individual_T126.txt`) → el loader los detecta como (2026, 1). Individual 43.739 × 234,
-  hogar 15.447 × 98, merge 43.739 × 330 sin hogares sin match; ITF int64 / IPCF float64.
-  Esquema nuevo (EMPLEO, SECTOR, P_DECCF, V2_01_M, V5_01_M presentes). Todas las variables
-  que usan los notebooks 01-05 están. Tasas rápidas T1-2026: actividad 48,6%, empleo 44,8%,
-  desocupación 7,8%.
-- Notebook 00: `build_panel(..., overwrite=False)` (antes estaba en True → recompilaba los 36);
-  la verificación del merge usa `available[-1]` en vez de `(2025, 4)` fijo.
-- Títulos "serie 2017-2025" en 02-05 → "serie desde 2017".
-- **VALIDADO en Colab (2026-09-29):** el 00 compiló solo T126 (43.739 filas × 331 cols, los
-  36 previos salteados). 01-05 corren con último trimestre = T126 (37 trimestres). Valores
-  T1-2026: actividad 48,6 / empleo 44,8 / desocup 7,8 / subocup 11,1; informalidad 44,2%
-  (máximo de la serie desde 2023T4); Gini 0,442, D10/D1 19,1, top10 34,0%; tamaño hogar
-  2,95; sin cloaca 27,0%, hacinamiento crítico 1,8%; secundario completo+ (25+) 64,3%,
-  analfabetismo 0,71%.
-- Fix cosmético notebook 01: pirámide usa `FuncFormatter` (eliminado UserWarning de
-  `set_ticklabels`).
-- Observación (no bloqueante): participación por decil en 03 es "escalonada" (D5 5,5% →
-  D6 8,5%) por empates de IPCF en valores redondos (ej. $500.000) al cortar deciles por
-  cuantil ponderado. Posible mejora: asignar deciles por ranking acumulado de PONDIH.
-- Próximo trimestre: T2-2026 (~fin de sept/oct) → subir zip a carga_EPH y correr 00.
+## ⭐ HANDOFF (última sesión: 2026-09-29)
 
-## ⭐ HANDOFF (última sesión: 2026-06-12) — leer esto primero
+**Estado: proyecto completo y al día con T1-2026.** 6 notebooks validados en Colab con
+**37 trimestres (T1-2017 → T1-2026)**. Árbol git limpio, todo pusheado a `main`.
 
-**Estado: notebook 00 (compilador) FUNCIONA end-to-end y validado en Colab.**
+Última sesión (2026-09-29):
+- El usuario subió `EPH_usu_1_Trim_2026_txt.zip` a Drive `carga_EPH`. Zip con nombres
+  internos regulares (`usu_hogar_T126.txt`, `usu_individual_T126.txt`).
+- Notebook 00 pasado a `overwrite=False` (antes `True` → recompilaba los 36) y su
+  verificación usa `available[-1]` (antes `(2025, 4)` fijo). Compiló solo T126
+  (43.739 filas × 331 cols); los 36 previos salteados.
+- Títulos "serie 2017-2025" de 02-05 → "serie desde 2017".
+- Notebook 01: pirámide usa `plt.FuncFormatter` (eliminado `UserWarning` de `set_ticklabels`).
+- Notebooks 01-05 re-corridos en Colab por el usuario con último trimestre = T126. OK.
 
-Lo logrado y verificado en Colab:
-- Los 36 trimestres (T1-2017 → T4-2025, incluye T4-2020) se compilan a
-  **un parquet por trimestre** guardado en **Google Drive**
-  (`/content/drive/MyDrive/carga_EPH/processed/eph_T<Q><YY>.parquet`), persistente.
-- Total: **1.825.881 filas**. Merge individuo+hogar OK (cada persona trae `ITF`/`IPCF` del hogar).
-- Montos numéricos OK: `ITF` int64, `IPCF` float64 (ej. `2933333.33` con punto). Fix de
-  coma decimal aplicado (`decimal=","` en `_read_csv`).
-- Quiebre de esquema 4T2023 confirmado: `EMPLEO`, `SECTOR`, `P_DECCF`, `V2_01_M`,
-  `V5_01_M` empiezan en 2023T4. Cols del merge: 264 (≤T3-2023) / 332 (≥T4-2023).
+**Pendientes / ideas (ninguno bloqueante):**
+1. **Deciles "escalonados" en 03** (D5 5,5% → D6 8,5% en T126): los cortes por cuantil
+   ponderado agrupan empates de IPCF en valores redondos (ej. $500.000). Mejora: asignar
+   decil por ranking acumulado de `PONDIH` (orden estable) en `deciles_share` en vez de cortar por cuantiles ponderados.
+   El usuario todavía no confirmó si quiere el fix.
+2. **T126 individual trae 234 cols** (T4-2023…T4-2025 traían 235). No se identificó qué
+   columna falta (no hay copia local de T425). Verificar en Colab comparando
+   `pq.read_schema` de `eph_T425.parquet` vs `eph_T126.parquet`. Ninguna variable usada
+   por los notebooks falta.
+3. Anomalía menor heredada: T3-2021 tiene 266 cols en el merge (vs 264).
+4. Contrastar desocupación T1-2026 (7,8%) con el informe oficial INDEC "Mercado de trabajo".
+5. Extensiones posibles: notebook de cruces (ingreso × educación, informalidad × región),
+   pobreza por canastas CBA/CBT (requiere valores INDEC por región + deflactar), README
+   con resumen de hallazgos.
+6. **Próximo trimestre: T2-2026** → subir zip a `carga_EPH` y correr el 00 (ver flujo).
 
-**Decisión tomada (Opción A):** los parquets viven en Drive (`carga_EPH/processed`), NO se
-versionan en GitHub. Los notebooks 01-05 los leen con
-`load_panel(columns=[...], quarters=[...], out_dir=PROCESSED_DIR)` donde
-`PROCESSED_DIR = "/content/drive/MyDrive/carga_EPH/processed"`.
+## Flujo para agregar un trimestre (no requiere tocar código)
 
-**PROYECTO COMPLETO (2026-06-12): los 6 notebooks validados en Colab.**
-00 (compilador) + 01 demografía + 02 laboral + 03 ingresos + 04 vivienda + 05 educación.
-Todos leen los parquets desde Drive (vía copia local), ponderados, con datos coherentes
-con INDEC. README con badges Colab de los 6 en la tabla.
+1. Descargar del INDEC `EPH_usu_<Q>_Trim_<YYYY>_txt.zip` (Bases de datos → EPH microdatos).
+2. Subirlo **sin descomprimir** a Google Drive → Mi unidad → `carga_EPH`.
+3. Correr `00_preparacion_bases.ipynb` en Colab (Runtime → Run all). Debe mostrar el
+   trimestre nuevo como "compilado" y los demás "ya existía (salteado)".
+4. Re-correr 01-05: toman el último trimestre automáticamente.
+5. Si el zip trae nombres internos raros (como T4-2020), ampliar `_parse_period_from_name`
+   / `_base_type_from_name` en `src/data_loader.py`.
 
-**`05_educacion.ipynb` VALIDADO en Colab (2026-06-12).** Secundario completo o más (25+)
-de ~56% (2017) a ~64% (2025), creciente; analfabetismo ~0.7-1.2%, bajo. Coherente.
+**Importante:** 01-05 obtienen `ULTIMO` con `list_available_quarters()`, que escanea los
+**zips de Drive**, no los parquets. Si se sube un zip y no se corre el 00, el notebook
+pedirá un parquet inexistente → siempre correr el 00 primero.
 
-**POSIBLES EXTENSIONES FUTURAS (si el usuario quiere seguir):**
-- Notebook de cruces (ej. ingreso × educación, informalidad × región).
-- Pobreza por canastas CBA/CBT (requiere cargar valores INDEC por período/región + deflactar).
-- README más vistoso / portada con resumen de hallazgos.
-- Cuando salga T1-2026 (~3 ago): subir su .zip a carga_EPH y correr el 00 con overwrite=False.
+## Valores de referencia (para detectar regresiones)
 
-**`04_vivienda.ipynb` VALIDADO en Colab (2026-06-12).** Sin agua por cañería ~2-3%, sin
-cloaca ~25-31% (baja de 30% a 27% en la serie), hacinamiento crítico ~2% estable. Todo
-coherente con INDEC.
+| Indicador | T4-2025 | T1-2026 |
+|---|---|---|
+| Actividad / empleo / desocupación (%) | 48,6 / 45,0 / 7,5 | 48,6 / 44,8 / 7,8 |
+| Subocupación (% PEA) | 11,3 | 11,1 |
+| Informalidad (% ocupados, desde 2023T4) | 43,0 | 44,2 (máx. serie) |
+| Gini IPCF / D10/D1 / top10 % | 0,427 / 17,7 / 32,5 | 0,442 / 19,1 / 34,0 |
+| Sin cloaca / sin agua cañería / hacinamiento crítico (% hogares) | 27,3 / 1,9 / 1,8 | 27,0 / 1,9 / 1,8 |
+| Secundario completo+ (25+) / analfabetismo (%) | 63,7 / 0,86 | 64,3 / 0,71 |
+| Edad promedio / índice masculinidad | 35,7 / 95,0 | 35,7 / 95,0 |
 
-**HECHO: `04_vivienda.ipynb` y `05_educacion.ipynb` creados.**
-- 04 (base Hogar, 1 registro por hogar con `CH03==1`, helper `cargar_hogares` que fuerza
-  numérico): tipo de vivienda (`IV1`) y tenencia (`II7`); acceso a agua (`IV6`) y desagüe
-  (`IV11`); hacinamiento (`IX_TOT`/`II1`, crítico >3 pers/cuarto); evolución del déficit
-  habitacional (sin agua por cañería, sin cloaca, hacinamiento crítico).
-- 05 (base Personas, helper `cargar` que fuerza numérico): nivel educativo (`NIVEL_ED`)
-  población 25+; asistencia (`CH10`) por grupo de edad; público/privado (`CH11`);
-  evolución de % con secundario completo o más y tasa de analfabetismo (`CH09`).
-Ambos usan el patrón Drive→local y `pd.to_numeric`. Badges Colab en README. **Falta validarlos.**
+Otros hitos de la serie: desocupación pico 2020T2 (13,1%) y mínimo 2023T3-T4 (5,7%);
+subocupación pico 2020T4 (15,1%); Gini pico 2024T1 (0,467); edad promedio cae en
+2020T2 (efecto pandemia en el operativo). Tamaño medio del hogar T126: 2,95.
+Total panel previo a T126: 1.825.881 filas (36 trimestres).
 
-**`03_ingresos_pobreza.ipynb` VALIDADO en Colab (2026-06-12).** Gini 0.41-0.47 (rango
-oficial), D10/D1 ~17.7 en T4-2025, top10 ~32.5%, bottom40 ~15%. Capta pico de desigualdad
-2020T2 (Gini 0.451) y repunte 2024T1 (0.467, salto inflacionario). Fix de coerción
-numérica funcionó.
+## Qué es / arquitectura (resumen)
 
-**HECHO: `03_ingresos_pobreza.ipynb` creado.** El usuario eligió enfoque
-**distribución+deciles SIN línea de pobreza** (evita cargar CBA/CBT y deflactar). Usa
-`IPCF` + ponderador `PONDIH`, filtra `IPCF`>=0 y notna. Funciones propias
-`weighted_quantile` y `weighted_gini` (Lorenz). 5 secciones: distribución IPCF último
-trim, participación por decil + ratio D10/D1, Gini serie 2017-2025, evolución
-ratio D10/D1 + share top10/bottom40. Métricas unit-free (no necesitan deflactar). Badge
-Colab en README. **Falta validarlo en Colab.** (Extensión futura posible: pobreza por
-canastas CBA/CBT.)
+- Repo público `santiagoriverti/analisis_EPH`. Notebooks pensados para **Google Colab**.
+- Datos: `.zip` de microdatos INDEC en Drive `carga_EPH` → el **00** los compila a un
+  parquet por trimestre en `carga_EPH/processed/eph_T<Q><YY>.parquet` (persistente en
+  Drive, **no versionado** en GitHub: "Opción A").
+- 01-05 copian esos parquets a `/content/processed_local` (evita desconexión FUSE) y leen
+  con `load_panel(columns=[...], quarters=[...], out_dir=PROCESSED_DIR)`.
+- Sin dependencia de `pyeph`. Toda la lógica de carga en `src/data_loader.py`.
+- Detalle de funciones, gotchas y decisiones: [`docs/TECNICO.md`](../docs/TECNICO.md).
 
-**`02_mercado_laboral.ipynb` VALIDADO en Colab (2026-06-12).** Números coinciden con
-INDEC: desocupación pico 2020T2 (13.1%), mínimo 2023T3-T4 (5.7%), repunte 2024-25 ~6-8%;
-actividad ~45-49%, empleo ~41-46%, subocupación ~10-13% (pico 2020T4 15.1%); informalidad
-41-43% desde 2023T4. El filtro del quiebre 4T2023 funcionó OK.
+## Notebooks (todos validados en Colab)
 
-**HECHO: `02_mercado_laboral.ipynb` creado (set laboral completo).** 5 secciones:
-(1) tasas actividad/empleo/desocupación serie 2017-2025 — definiciones INDEC: PEA=ESTADO∈{1,2},
-actividad=PEA/total, empleo=ocupados/total, desocup=desocup/PEA; (2) subocupación
-(INTENSI==1)/PEA; (3) categoría ocupacional (CAT_OCUP) de ocupados, último trimestre;
-(4) informalidad (EMPLEO==2 / ocupados) **solo desde 2023T4** (quiebre esquema, filtra
-`(y,p) >= (2023,4)`). Usa el patrón de copia Drive→local en el setup. Badge Colab en README.
-**Falta validarlo en Colab.**
+| NB | Contenido | Base / ponderador |
+|---|---|---|
+| 00 | Compila zips → parquets por trimestre; verifica merge/montos y quiebre 4T2023 | — |
+| 01 | Pirámide edad×sexo, parentesco y tamaño de hogar, región, edad promedio e índice de masculinidad | Personas / `PONDERA` |
+| 02 | Actividad/empleo/desocupación, subocupación (`INTENSI`), `CAT_OCUP`, informalidad (`EMPLEO==2`, solo ≥2023T4) | Personas / `PONDERA` |
+| 03 | IPCF: percentiles, participación por decil, D10/D1, Gini (Lorenz), top10/bottom40. Sin línea de pobreza (decisión del usuario) | Personas / `PONDIH` |
+| 04 | Tipo de vivienda (`IV1`), tenencia (`II7`), agua (`IV6`), desagüe (`IV11`), hacinamiento (`IX_TOT`/`II1`, crítico >3) | Hogar (jefe `CH03==1`) / `PONDERA` |
+| 05 | `NIVEL_ED` 25+, asistencia (`CH10`), público/privado (`CH11`), analfabetismo (`CH09`) | Personas / `PONDERA` |
 
-**`01_demografia.ipynb` VALIDADO en Colab (2026-06-12).** Corrió completo: pirámide
-coherente (base angosta, viudez femenina en 80+), tamaño hogar promedio 2.96, edad
-promedio ~35-36 con caída en 2020T2 (efecto pandemia en el operativo EPH), índice de
-masculinidad ~92→95. La copia Drive→local resolvió la desconexión FUSE.
+Definiciones INDEC usadas en 02: PEA = `ESTADO∈{1,2}`; actividad = PEA/total;
+empleo = ocupados/total; desocupación = desocupados/PEA; subocupación = `INTENSI==1`/PEA.
 
-**GOTCHA dtypes al concatenar (notebooks 01-05):** al unir trimestres con `load_panel`,
-si una columna numérica viene como texto en ALGÚN trimestre, toda la columna queda como
-`object` → comparaciones tipo `col >= 0` fallan (`'>=' not supported between str and int`).
-Pasó con `IPCF`/`PONDIH` en el notebook 03. **Solución:** `pd.to_numeric(col, errors="coerce")`
-antes de filtrar/operar (en el 03 está encapsulado en `cargar_ingresos()`). Aplicar el mismo
-patrón en 04/05 con cualquier columna numérica que se compare/agregue.
+## Reglas del usuario
 
-**GOTCHA Colab + Drive (importante para notebooks 01-05):** leer muchos parquets seguidos
-directo desde el mount de Drive tira `OSError [Errno 107] Transport endpoint is not
-connected` (FUSE se desconecta). **Solución aplicada en el notebook 01:** en el setup,
-copiar UNA vez los parquets de `DRIVE_PROCESSED` (`/content/drive/MyDrive/carga_EPH/processed`)
-a disco local (`PROCESSED_DIR = "/content/processed_local"`) con `shutil.copy`, y pasar ese
-`PROCESSED_DIR` local a `load_panel`. Los notebooks 02-05 deben usar el mismo patrón.
+- Commits **solo** con el usuario Santiago Riverti; **nunca** `Co-Authored-By: Claude` ni
+  atribución a Claude en commits/PRs.
+- Repos locales en `C:\Users\sriverti\Desktop\INECO\Repositorios\` (en otra PC, clonar
+  donde corresponda).
+- Idioma de trabajo: español. Actualizar este archivo al cerrar cada sesión.
+- Bases pesadas del INDEC no se commitean (`data/raw/*.zip` en `.gitignore`).
 
-**HECHO (sesión 2026-06-12, parte 2):** creado `notebooks/01_demografia.ipynb` con el
-**set demográfico estándar** (lo eligió el usuario):
-1. Pirámide de población edad×sexo (grupos quinquenales, último trimestre, ponderado).
-2. Composición de hogares: parentesco (`CH03`) + tamaño del hogar (`IX_TOT`, 1 registro
-   por hogar tomando el jefe CH03==1).
-3. Población por región (`REGION`, último trimestre).
-4. Evolución temporal: edad promedio e índice de masculinidad por trimestre (toda la serie).
-Sigue el patrón de setup del notebook 00 (clonar repo + montar Drive + `PROCESSED_DIR`),
-usa `load_panel(columns=[...], quarters=[...], out_dir=PROCESSED_DIR)` y pondera con
-`PONDERA`. Detecta el último trimestre con `list_available_quarters()[-1]`. Badge Colab
-agregado en la tabla del README. **Falta validarlo corriéndolo en Colab.**
+## Historial resumido
 
-**Cómo retomar en Colab:** abrir notebook desde el badge del README → Runtime → Restart and
-run all → esperar a que termine la sección 4 ("Listo. Parquets en:") antes de seguir.
-Los parquets ya están en Drive, así que para los notebooks 01-05 NO hace falta recompilar.
-
----
-
-## Qué es
-
-Repositorio de notebooks (Colab) para análisis de la Encuesta Permanente de Hogares (EPH,
-INDEC, Argentina). Fuente de datos: `.zip` de microdatos descargados manualmente del
-INDEC y subidos a Google Drive (carpeta `carga_EPH`).
-
-## Decisiones de arquitectura
-
-- **Repo**: `analisis_EPH`, público, en GitHub (`santiagoriverti`).
-- **Notebooks planificados** (uno por tema, en `notebooks/`):
-  1. `01_demografia.ipynb` — estructura poblacional, composición de hogares, región.
-  2. `02_mercado_laboral.ipynb` — empleo, desocupación, informalidad, subocupación.
-  3. `03_ingresos_pobreza.ipynb` — distribución del ingreso, pobreza, indigencia.
-  4. `04_vivienda.ipynb` — condiciones habitacionales, hacinamiento, servicios.
-  5. `05_educacion.ipynb` — nivel educativo, asistencia escolar, analfabetismo.
-- **Carga de datos** (actualizado 2026-06-12, NO usa `pyeph`):
-  - Fuente: `.zip` del INDEC (ej. `EPH_usu_4_Trim_2025_txt.zip`), que contienen
-    `usu_individual_T<Q><YY>.txt` y `usu_hogar_T<Q><YY>.txt` (separados por `;`,
-    encoding `latin1`).
-  - El usuario sube esos `.zip` **sin descomprimir** a Google Drive, carpeta
-    `carga_EPH` (raíz de "Mi unidad"). En Colab se monta Drive con
-    `google.colab.drive.mount('/content/drive')` → ruta
-    `/content/drive/MyDrive/carga_EPH` (constante `DRIVE_DIR` en `src/data_loader.py`).
-  - `src/data_loader.py::_find_sources()` escanea `DRIVE_DIR` y `data/raw/`, indexa
-    cada `.zip`/`.txt` por `(year, period, base_type)` parseando el patrón `T<Q><YY>`
-    del nombre de archivo (ej. `usu_individual_T425.txt` → (2025, 4, "individual")).
-  - `load_eph(year, period, base_type)` lee el `.txt` directo desde el `.zip` (sin
-    descomprimir a disco) o desde `data/raw/`.
-  - `list_available_quarters()` devuelve los `(year, period)` que tienen AMBAS bases
-    (individual + hogar) disponibles.
-  - `_read_csv` usa `sep=";"`, `encoding="latin1"`, `decimal=","` (montos con coma decimal).
-  - `build_panel(quarters=None, search_dirs=None, out_dir=None, overwrite=False)`:
-    procesa **un trimestre por vez** (memory-safe), une individuos+hogares por
-    `CODUSU`+`NRO_HOGAR` (`merge_individual_hogar`), agrega `ANIO`/`TRIMESTRE`, corrige
-    columnas con tipos mezclados (`_fix_mixed_type_columns` — ej. `CH05` int/string según
-    trimestre) y guarda **un parquet por trimestre** en `out_dir` (por defecto
-    `data/processed/`, en el notebook se pasa la carpeta de Drive). Con `overwrite=False`
-    saltea los ya compilados. Devuelve un resumen (lista de dicts), NO el DataFrame.
-    Imprime progreso por trimestre.
-  - `load_panel(columns=None, quarters=None, out_dir=None)`: lee los parquets por
-    trimestre de `out_dir` y los concatena, tomando solo las columnas pedidas (si una
-    columna no existe en un trimestre viejo, la saltea). Es la función que usan los
-    notebooks 01-05. Lanza `FileNotFoundError` claro si no hay parquets.
-  - **NO existe `eph_panel.parquet`** (un panel único superaría RAM de Colab y 100 MB de GitHub).
-- **Bases nuevas**: el usuario las descarga manualmente del sitio del INDEC y las sube
-  a Drive `carga_EPH` (no se automatiza scraping). Para agregar un trimestre nuevo NO
-  hace falta tocar código: `00_preparacion_bases.ipynb` detecta automáticamente todo lo
-  que haya en `carga_EPH`.
-- **Acceso desde Colab**: se clona el repo público (`git clone`) para tener
-  `src/data_loader.py`, y se monta Drive para los datos.
-
-## Estado actual (2026-06-12)
-
-- Estructura de carpetas creada (`notebooks/`, `data/raw/`, `data/processed/`, `src/`).
-- `src/data_loader.py` reescrito sin dependencia de `pyeph` (ver arriba).
-- `notebooks/00_preparacion_bases.ipynb`: **completo, validado y funcionando** en Colab.
-  6 secciones numeradas: Setup → Diagnóstico → Trimestres disponibles → Compilación →
-  Verificación merge/montos → Verificación esquema 4T2023. Guarda los parquets en Drive.
-- README actualizado: notebook 00 en la tabla con badge "Abrir en Colab"; documentado el
-  flujo Drive, `load_panel`, y el quiebre 4T2023.
-- Bases en Drive: **36 trimestres T1-2017 → T4-2025** (T1-2026 se publica ~3 de agosto).
-- Notebooks de análisis 01-05: **todavía sin contenido** (próximo paso: 01_demografia).
-
-## Naming irregular dentro de los zips del INDEC (detectado 2026-06-12)
-
-Los 36 zips de `carga_EPH` (T1-2017 a T4-2025) no son uniformes en los nombres internos:
-- Mayúsculas/minúsculas variables (`usu_individual_t117.txt`, `Usu_individual_T417.txt`).
-- Algunos con doble extensión (`usu_individual_T222.txt.txt`).
-- **T4-2020 es un caso especial**: el zip trae
-  `EPH_usu_personas_4to.trim_2020.txt` (usa "personas" en vez de "individual") y
-  `EPH_usu_hogar_4to_trim2020_txt.txt` (sin el patrón `T420`).
-
-Se agregó en `src/data_loader.py`:
-- `_base_type_from_name`: ahora también reconoce `"personas"` como `"individual"`.
-- `_parse_period_from_name`: además del patrón `T<Q><YY>`, soporta el patrón
-  `<Q>to_trim<YYYY>` / `<Q>.trim_<YYYY>` (regex `_ORDINAL_TRIM_RE`) para casos como T4-2020.
-
-Con esto los 36 trimestres (T1-2017 a T4-2025, incluyendo T4-2020) deberían quedar
-disponibles en `list_available_quarters()`.
-
-## Diccionario de datos EPH (creado 2026-06-12)
-
-`.claude/memoria_EPH.md` es el **diccionario completo** de las bases EPH (hogar +
-personas): significado y valores de cada variable, combinando el PDF oficial
-`EPH_registro_4T2025.pdf` con la verificación de los headers reales de los 36 `.txt`.
-
-Hallazgo crítico documentado ahí: **quiebre de esquema en 4T2023**.
-- Hasta T3-2023: 177 cols individual / 88 cols hogar (esquema "viejo", ingresos agregados).
-- Desde T4-2023: 235 cols individual / 98 cols hogar (esquema "nuevo": agrega `EMPLEO`,
-  `SECTOR`, ingresos/pensiones desagregados, deciles `P_DECCF` de personas).
-- Implicancia: al concatenar el panel, las columnas nuevas quedan NaN en trimestres
-  viejos. Para informalidad/ingresos desagregados restringir a T4-2023+; para series
-  largas usar solo variables comunes.
-
-Consultar `memoria_EPH.md` antes de escribir cualquier notebook de análisis.
-
-## Opción A: parquets persistentes en Drive (2026-06-12)
-
-Decisión: los parquets compilados se guardan en **Google Drive**
-(`/content/drive/MyDrive/carga_EPH/processed/`), no en el `data/processed/` efímero de
-Colab. Así persisten y los notebooks 01-05 los leen sin recompilar.
-- `build_panel(out_dir=..., overwrite=False)`: guarda en `out_dir`; con `overwrite=False`
-  saltea trimestres ya compilados (para agregar solo nuevos).
-- `load_panel(out_dir=...)`: lee de la misma carpeta.
-- El notebook 00 define `PROCESSED_DIR = "/content/drive/MyDrive/carga_EPH/processed"` y
-  lo pasa a ambas funciones.
-
-## Fix coma decimal en montos (2026-06-12)
-
-Al correr el notebook 00 OK con los 36 trimestres, se vio que `IPCF` (y otros montos)
-venían como `2933333,33` (coma decimal del INDEC) → se leían como **texto**, rompiendo
-cálculos. Fix: `_read_csv` ahora usa `decimal=","` en `pd.read_csv`. Tras esto los montos
-(ITF, IPCF, P21, P47T, V*_M, etc.) quedan como float. Requiere re-correr el notebook 00.
-
-Nota: conteo de columnas del merge = 264 (esquema viejo) / 332 (esquema nuevo desde
-4T2023). Anomalía menor: T3-2021 dio 266 (2 columnas extra) — no bloquea, revisar si
-algún análisis lo necesita.
-
-## Refactor memory-safe (2026-06-12) — IMPORTANTE
-
-Al correr el notebook 00 en Colab con los 36 trimestres, la sesión murió por RAM al
-concatenar todo en un solo DataFrame. Cambios en `src/data_loader.py`:
-- `build_panel(quarters=None)`: ahora procesa **un trimestre por vez**, guarda un parquet
-  por trimestre (`eph_T<Q><YY>.parquet`) y libera memoria con `del`. **Ya NO concatena en
-  RAM ni genera `eph_panel.parquet`** (un panel único de 36 trimestres × 235 cols
-  superaría además el límite de 100 MB de GitHub). Devuelve un resumen (lista de dicts).
-- Nueva función `load_panel(columns=None, quarters=None)`: lee los parquets por trimestre
-  y concatena, leyendo solo las columnas pedidas (maneja el quiebre de esquema: si una
-  columna no existe en un trimestre viejo, la saltea para ese archivo). Es la función que
-  deben usar los notebooks 01-05.
-- Import nuevo: `import pyarrow.parquet as pq` (para leer schemas por trimestre).
-
-El notebook 00 se actualizó en consecuencia: `build_panel(available)` devuelve un resumen
-(tabla de filas/columnas por trimestre); la verificación del merge y del esquema 4T2023
-usan `load_panel` con columnas acotadas.
-
-## Notebook 00 actualizado (2026-06-12)
-
-`00_preparacion_bases.ipynb` quedó como el **notebook base/compilador** del proyecto.
-Cambios:
-- Intro reescrita: deja claro que compila los datos para que los notebooks 01-05 los
-  procesen, y advierte el quiebre de esquema 4T2023.
-- Celda de verificación del panel (filas/columnas, conteo por trimestre).
-- Celda nueva que reporta, para cada variable del esquema nuevo (`EMPLEO`, `SECTOR`,
-  `P_DECCF`, `V2_01_M`, `V5_01_M`), el primer trimestre con datos no nulos.
-- En el README, el notebook 00 ahora está **en la misma tabla** que 01-05, con su badge
-  "Abrir en Colab" (para ejecutarlo directo desde el README).
-
-## Próximos pasos
-
-1. **Implementar `01_demografia.ipynb`** (próximo, martes): pirámide edad×sexo, hogares,
-   región/aglomerado, evolución temporal. Leer con `load_panel(..., out_dir=PROCESSED_DIR)`,
-   ponderar con `PONDERA`. Preguntar al usuario qué cortes priorizar. Agregar badge Colab al README.
-2. Implementar el resto de notebooks (02-05) siguiendo el mismo patrón.
-3. (Opcional, baja prioridad) investigar la anomalía de T3-2021 (266 cols vs 264).
-4. Cuando salga T1-2026 (~3 ago): subir su `.zip` a `carga_EPH` y correr el notebook 00
-   con `overwrite=False` (compila solo el trimestre nuevo).
-
-## Notas sobre la EPH (para tener en cuenta al diseñar los notebooks)
-
-- Encuesta trimestral, dos tipos de base: **individual** (personas) y **hogar** (hogares).
-- Variables clave típicas: `CH04` (sexo), `CH06` (edad), `ESTADO` (condición de
-  actividad), `CAT_OCUP` (categoría ocupacional), `ITF`/`IPCF` (ingresos del hogar/per
-  cápita), `NIVEL_ED` (nivel educativo), ponderadores `PONDERA`/`PONDIH`.
-- Hay que usar los ponderadores (`PONDERA`, `PONDIH`, `PONDII`) para cualquier
-  estadística representativa a nivel poblacional.
-- Los `.txt` del INDEC están separados por `;` y en encoding `latin1`.
+- **2026-06-12**: creación del repo, `data_loader` sin `pyeph`, notebook 00 (refactor
+  memory-safe, fix coma decimal, naming irregular de zips, Opción A en Drive), diccionario
+  `memoria_EPH.md`, notebooks 01-05 creados y validados en Colab (36 trimestres).
+  Fixes: copia Drive→local (FUSE), `pd.to_numeric` en `IPCF`/`PONDIH` (03).
+- **2026-06-16**: `CLAUDE.md` apuntando a la memoria.
+- **2026-09-29**: incorporado T1-2026 (ver HANDOFF); documentación reorganizada
+  (`docs/TECNICO.md`, README con setup para nueva PC).

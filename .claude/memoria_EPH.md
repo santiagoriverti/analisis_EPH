@@ -4,7 +4,7 @@ Documento de referencia para **procesar y entender** las bases de microdatos de 
 Encuesta Permanente de Hogares (EPH, INDEC). Combina:
 - El **diseño de registros oficial** (PDF `EPH_registro_4T2025.pdf`, INDEC, abril 2026).
 - La **verificación de los headers reales** de los 36 `.txt` dentro de los `.zip` de
-  `carga_EPH` (T1-2017 a T4-2025).
+  `carga_EPH` (T1-2017 a T4-2025), más T1-2026 (verificado 2026-09-29).
 
 ---
 
@@ -46,6 +46,7 @@ Verificado en los headers reales. Hay **dos esquemas distintos** según el trime
 |---|---|---|---|
 | **T1-2017 → T3-2023** | **177** | **88** | "viejo" (agregado) |
 | **T4-2023 → T4-2025** | **235** | **98** | "nuevo" (desagregado) |
+| **T1-2026** | **234** | **98** | "nuevo" (1 col. individual menos, sin identificar; no afecta a los notebooks) |
 
 El INDEC, a partir del **4° trimestre de 2023**, incorporó nuevas variables:
 informalidad laboral (`EMPLEO`, `SECTOR`), estrategias del hogar e ingresos no laborales
@@ -331,7 +332,8 @@ Principales (todas 1=Sí/2=No salvo aclaración):
 0. Los notebooks 01-05 NO leen los `.txt`/`.zip` directo: usan
    `from src.data_loader import load_panel` y piden columnas/trimestres acotados
    (`load_panel(columns=[...], quarters=[...])`). El notebook 00 ya compiló todo a
-   `data/processed/eph_T<Q><YY>.parquet` (un archivo por trimestre).
+   `eph_T<Q><YY>.parquet` (un archivo por trimestre), guardados en Drive
+   `carga_EPH/processed` y copiados a `/content/processed_local` en el setup de 01-05.
 1. Leer siempre con `sep=";"`, `encoding="latin1"` (ya implementado en `data_loader._read_csv`).
 2. Para estimaciones poblacionales, **multiplicar por el ponderador correcto** (§1).
 3. Para series temporales largas (pre y post 4T2023), usar solo el set de variables

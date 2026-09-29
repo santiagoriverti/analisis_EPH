@@ -49,8 +49,7 @@ y unir las bases de nuevo.
 | `04_vivienda.ipynb` | Tipo de vivienda, tenencia, servicios (agua/cloaca), hacinamiento, déficit | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/04_vivienda.ipynb) |
 | `05_educacion.ipynb` | Nivel educativo, asistencia escolar, público/privado, analfabetismo | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/05_educacion.ipynb) |
 
-A medida que se publiquen los notebooks 01-05 se agregan acá con su botón "Abrir en Colab"
-(formato: `https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/<archivo>.ipynb`).
+**Cobertura actual:** 37 trimestres, **T1-2017 → T1-2026** (todos los notebooks validados en Colab).
 
 ### Qué hace el notebook 00 (compilación)
 
@@ -60,7 +59,8 @@ A medida que se publiquen los notebooks 01-05 se agregan acá con su botón "Abr
 3. Agrega `ANIO`/`TRIMESTRE`, corrige columnas con tipos mezclados y guarda en
    `data/processed/` **un parquet por trimestre** (`eph_T<Q><YY>.parquet`), procesando
    un trimestre por vez para no desbordar la RAM de Colab. No se genera un único panel
-   combinado (sería >100 MB, supera el límite de GitHub).
+   combinado (sería >100 MB, supera el límite de GitHub). Con `overwrite=False` solo
+   compila los trimestres que todavía no tienen parquet en Drive.
 4. Reporta el **quiebre de esquema de 4T2023** (ver diccionario): los trimestres viejos
    (≤T3-2023) no tienen las variables nuevas (`EMPLEO`, `SECTOR`, ingresos desagregados, etc.).
 
@@ -79,13 +79,40 @@ df = load_panel(columns=["CH06", "CH04", "REGION", "PONDERA"])  # ej. demografí
 2. Subir el `.zip` **sin descomprimir** a Google Drive, carpeta `carga_EPH`
    (Mi unidad > `carga_EPH`).
 3. Volver a correr `notebooks/00_preparacion_bases.ipynb`: detecta automáticamente
-   todos los trimestres presentes en `carga_EPH`, no hace falta editar nada en el código.
+   todos los trimestres presentes en `carga_EPH` y compila solo el nuevo; no hace falta
+   editar nada en el código.
+4. Recién después re-correr los notebooks 01-05: toman el último trimestre solos.
+   (Si se corren antes del 00, fallan porque el parquet del trimestre nuevo no existe.)
 
-## Setup local
+## Continuar en otra PC
+
+Los datos no están en el repo (viven en el Google Drive del usuario) y los notebooks
+corren en Colab, así que en una PC nueva alcanza con:
+
+1. Clonar el repo:
+   ```bash
+   git clone https://github.com/santiagoriverti/analisis_EPH.git
+   ```
+2. Configurar git con el usuario propio (`git config user.name "Santiago Riverti"`) y
+   credenciales de GitHub (Git Credential Manager o `gh auth login`) para poder pushear.
+3. Para trabajar con Claude Code: abrir la carpeta del repo; `CLAUDE.md` indica leer
+   `.claude/memoria.md` (estado/pendientes), `docs/TECNICO.md` y `.claude/memoria_EPH.md`.
+4. Para ejecutar: abrir cualquier notebook con su badge de Colab (usa la cuenta de Google
+   que tiene la carpeta `carga_EPH`). Los cambios de código deben estar pusheados a
+   `main` para que Colab los vea.
+
+### Setup local (opcional)
 
 ```bash
 pip install -r requirements.txt
 ```
+
+Para correr localmente, poner los `.zip` del INDEC en `data/raw/` (no se versionan).
+
+## Documentación técnica
+
+Ver [`docs/TECNICO.md`](docs/TECNICO.md): flujo de datos, funciones de
+`src/data_loader.py`, esquemas por trimestre, gotchas resueltos y convenciones de análisis.
 
 ## Diccionario de datos
 
