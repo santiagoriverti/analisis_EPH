@@ -17,21 +17,21 @@ asalariados sin descuento 37,9% (percentil 100), tasa asalariados registrados 20
 (p86), préstamos familiares (p90), gastaron ahorros (p89), vendieron pertenencias (p81).
 CSV exportado en Drive `carga_EPH/resultados/termometro_EPH.csv` (37 × 36).
 
-**EN CURSO — candidatas al índice (2026-09-29):** el usuario pidió evaluar `PP11O==1`
-(desocupados por despido/cierre, % PEA → dimensión A) y `PP03C==2` (pluriempleo, % ocupados
-→ dimensión C). Se agregaron al 06 como **complementarias** (el índice NO cambió) + nueva
-**sección 10 "Diagnóstico de variables candidatas"** (export pasó a sección 11), con
-`armar_termometro(dimensiones)` refactorizado para comparar índices. Criterios: (1) cobertura
-desde 2017, (2) distribución de códigos estable antes/después de 4T2023, (3) pandemia >
-valle 2023T3-T4, (4) autocorrelación lag1 ≥ 0,3, (5) Spearman con termómetro ≥ 0,3,
-(6) |corr| < 0,85 con cada indicador del índice. También muestra índice actual vs con
-candidatas. **Próximo paso: el usuario corre el 06 en Colab, pega la sección 10, y según el
-diagnóstico se pasan (o no) a `DIMENSIONES`.** Notas: `PP11O` solo se pregunta a
-ex-asalariados (ex-cuentapropistas por falta de clientes = `PP11L==1`); código 7 "renuncia
-obligada/pactada" es despido encubierto (posible ampliación si el usuario quiere); código 4
-= fin de temporario (estacional, excluido). Niveles T4-2025: despido/cierre ~1,0% PEA
-(12,7% de los desocupados), pluriempleo ~11,9% de ocupados. Generador del notebook: se
-edita el .ipynb vía JSON; la estructura de celdas está descrita en `docs/TECNICO.md` §6.
+**v3 (2026-09-29): candidatas evaluadas con la serie real (sección 10 del 06).**
+- ✅ `PP11O==1` (desocupados por despido/cierre, % PEA) **incorporada a la dimensión A**.
+  Pasó los 6 criterios: códigos estables (12,7% → 14,2% de desocupados antes/después de
+  4T2023), pandemia 1,44% vs valle 2023 0,56%, autocorr 0,76, Spearman c/termómetro 0,60,
+  corr máx 0,83 (con desocupación, bajo el umbral 0,85), sin estacionalidad T1. Efecto
+  (simulado con el CSV real): corr 0,995 con v2, dif. máx 4,4 pts; 2020T2 64,7 → 66,1
+  (cruza a "Fiebre"), 2018T4 +2,0, 2024T1 +2,3; 2026T1 sin cambio (60,1).
+- ❌ `PP03C==2` (pluriempleo) **descartada** (queda complementaria): procíclica (pandemia
+  7,8% vs valle 11,2%; T1 8,4% vs resto 10,1%), corr 0,77 con tasa de empleo, leve cambio
+  de códigos con el esquema nuevo.
+- Sección 10 queda como herramienta reutilizable (`CANDIDATAS`, con Pluriempleo de ejemplo).
+- **Pendiente:** re-correr el 06 en Colab para confirmar los valores v3 (esperado 2020T2 ≈ 66).
+- Notas `PP11O`: solo ex-asalariados (ex-cuentapropistas por falta de clientes = `PP11L==1`);
+  código 7 "renuncia obligada/pactada" = despido encubierto (no incluido, posible ampliación);
+  código 4 fin de temporario (estacional, excluido).
 
 Historia de la v1 → v2:
 La v1 corrió en Colab (37 trimestres) pero falló el chequeo de sentido: 2020T2 daba 48
@@ -50,7 +50,7 @@ Descripción v2 (índice actual):
 Índice compuesto de "malestar" 0-100 (0 = mejor trimestre de la serie, 100 = peor), etapa 1
 sin variables monetarias. 3 dimensiones con peso 1/3 cada una:
 - A. Cantidad de empleo: desocupación, tasa de empleo (invertida), desocupación >1 año
-  (`PP10A==5`, % PEA).
+  (`PP10A==5`, % PEA), desocupados por despido/cierre (`PP11O==1`, % PEA; desde v3).
 - B. Calidad: subocupación (`INTENSI==1`), ocupados que buscan otro empleo (`PP03J==1`, % PEA),
   asalariados sin descuento jubilatorio (`CAT_OCUP==3 & PP07H==2`, % asalariados), tasa de
   empleo asalariado registrado (`CAT_OCUP==3 & PP07H==1`, % población, invertida).
