@@ -97,6 +97,8 @@ Variables del esquema nuevo (primer dato en 2023T4): `EMPLEO`, `SECTOR`, `P_DECC
 - `DIMENSIONES`: dict dimensión → {indicador: signo} (+1 = más alto es peor, -1 = invertido).
   Para agregar/quitar un indicador del índice basta con editar ese dict (y su cálculo).
 - `percentil_orientado(s, signo)`: rank promedio sobre `signo * s.round(1)` → 0-100.
+- `armar_termometro(dimensiones)` → `(norm, dims, termómetro)`: permite comparar el índice
+  con distintos sets de indicadores (lo usa la sección 10, diagnóstico de candidatas).
 - Termómetro = media de las dimensiones; cada dimensión = media de sus percentiles.
 - **Efecto composición:** en shocks que destruyen empleo precario (2020T2), los indicadores
   calculados sobre ocupados mejoran artificialmente. Por eso la dimensión B incluye una tasa

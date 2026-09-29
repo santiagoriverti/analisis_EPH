@@ -17,6 +17,22 @@ asalariados sin descuento 37,9% (percentil 100), tasa asalariados registrados 20
 (p86), préstamos familiares (p90), gastaron ahorros (p89), vendieron pertenencias (p81).
 CSV exportado en Drive `carga_EPH/resultados/termometro_EPH.csv` (37 × 36).
 
+**EN CURSO — candidatas al índice (2026-09-29):** el usuario pidió evaluar `PP11O==1`
+(desocupados por despido/cierre, % PEA → dimensión A) y `PP03C==2` (pluriempleo, % ocupados
+→ dimensión C). Se agregaron al 06 como **complementarias** (el índice NO cambió) + nueva
+**sección 10 "Diagnóstico de variables candidatas"** (export pasó a sección 11), con
+`armar_termometro(dimensiones)` refactorizado para comparar índices. Criterios: (1) cobertura
+desde 2017, (2) distribución de códigos estable antes/después de 4T2023, (3) pandemia >
+valle 2023T3-T4, (4) autocorrelación lag1 ≥ 0,3, (5) Spearman con termómetro ≥ 0,3,
+(6) |corr| < 0,85 con cada indicador del índice. También muestra índice actual vs con
+candidatas. **Próximo paso: el usuario corre el 06 en Colab, pega la sección 10, y según el
+diagnóstico se pasan (o no) a `DIMENSIONES`.** Notas: `PP11O` solo se pregunta a
+ex-asalariados (ex-cuentapropistas por falta de clientes = `PP11L==1`); código 7 "renuncia
+obligada/pactada" es despido encubierto (posible ampliación si el usuario quiere); código 4
+= fin de temporario (estacional, excluido). Niveles T4-2025: despido/cierre ~1,0% PEA
+(12,7% de los desocupados), pluriempleo ~11,9% de ocupados. Generador del notebook: se
+edita el .ipynb vía JSON; la estructura de celdas está descrita en `docs/TECNICO.md` §6.
+
 Historia de la v1 → v2:
 La v1 corrió en Colab (37 trimestres) pero falló el chequeo de sentido: 2020T2 daba 48
 (Tibio) porque la dimensión B daba 0,9 (¡"mejor" de la serie!) por **efecto composición**
