@@ -12,8 +12,18 @@
 - Notebook 00: `build_panel(..., overwrite=False)` (antes estaba en True → recompilaba los 36);
   la verificación del merge usa `available[-1]` en vez de `(2025, 4)` fijo.
 - Títulos "serie 2017-2025" en 02-05 → "serie desde 2017".
-- **Pendiente:** correr el 00 en Colab (compila solo T126) y luego re-correr 01-05 para
-  validar que el último trimestre pasa a 2026T1.
+- **VALIDADO en Colab (2026-09-29):** el 00 compiló solo T126 (43.739 filas × 331 cols, los
+  36 previos salteados). 01-05 corren con último trimestre = T126 (37 trimestres). Valores
+  T1-2026: actividad 48,6 / empleo 44,8 / desocup 7,8 / subocup 11,1; informalidad 44,2%
+  (máximo de la serie desde 2023T4); Gini 0,442, D10/D1 19,1, top10 34,0%; tamaño hogar
+  2,95; sin cloaca 27,0%, hacinamiento crítico 1,8%; secundario completo+ (25+) 64,3%,
+  analfabetismo 0,71%.
+- Fix cosmético notebook 01: pirámide usa `FuncFormatter` (eliminado UserWarning de
+  `set_ticklabels`).
+- Observación (no bloqueante): participación por decil en 03 es "escalonada" (D5 5,5% →
+  D6 8,5%) por empates de IPCF en valores redondos (ej. $500.000) al cortar deciles por
+  cuantil ponderado. Posible mejora: asignar deciles por ranking acumulado de PONDIH.
+- Próximo trimestre: T2-2026 (~fin de sept/oct) → subir zip a carga_EPH y correr 00.
 
 ## ⭐ HANDOFF (última sesión: 2026-06-12) — leer esto primero
 
