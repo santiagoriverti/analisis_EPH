@@ -28,6 +28,9 @@ CSV exportado en Drive `carga_EPH/resultados/termometro_EPH.csv` (37 × 36).
   7,8% vs valle 11,2%; T1 8,4% vs resto 10,1%), corr 0,77 con tasa de empleo, leve cambio
   de códigos con el esquema nuevo.
 - Sección 10 queda como herramienta reutilizable (`CANDIDATAS`, con Pluriempleo de ejemplo).
+- **Ampliado a `PP11O∈{1,7}`** (a pedido del usuario): se suma el código 7 "renuncia
+  obligada/pactada" (despido encubierto, ~1,5-2,2% de los desocupados). Indicador renombrado
+  "Desocupados por despido (incl. renuncia forzada)" (cambia el nombre de la columna del CSV).
 - **Pendiente:** re-correr el 06 en Colab para confirmar los valores v3 (esperado 2020T2 ≈ 66).
 - Notas `PP11O`: solo ex-asalariados (ex-cuentapropistas por falta de clientes = `PP11L==1`);
   código 7 "renuncia obligada/pactada" = despido encubierto (no incluido, posible ampliación);
@@ -50,7 +53,7 @@ Descripción v2 (índice actual):
 Índice compuesto de "malestar" 0-100 (0 = mejor trimestre de la serie, 100 = peor), etapa 1
 sin variables monetarias. 3 dimensiones con peso 1/3 cada una:
 - A. Cantidad de empleo: desocupación, tasa de empleo (invertida), desocupación >1 año
-  (`PP10A==5`, % PEA), desocupados por despido/cierre (`PP11O==1`, % PEA; desde v3).
+  (`PP10A==5`, % PEA), desocupados por despido o renuncia forzada (`PP11O∈{1,7}`, % PEA; desde v3).
 - B. Calidad: subocupación (`INTENSI==1`), ocupados que buscan otro empleo (`PP03J==1`, % PEA),
   asalariados sin descuento jubilatorio (`CAT_OCUP==3 & PP07H==2`, % asalariados), tasa de
   empleo asalariado registrado (`CAT_OCUP==3 & PP07H==1`, % población, invertida).
