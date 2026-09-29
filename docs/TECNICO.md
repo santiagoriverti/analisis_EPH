@@ -94,36 +94,43 @@ Variables del esquema nuevo (primer dato en 2023T4): `EMPLEO`, `SECTOR`, `P_DECC
 `notebooks/06_termometro.ipynb` (cada `md()`/`code()` del script es una celda, en orden).
 Editar el script, regenerar, validar el JSON y pushear.
 
-Estructura del notebook (11 secciones):
+Estructura del notebook (13 secciones + 2 anexos):
 
 | # | Sección | Contenido |
 |---|---|---|
 | 1 | Setup | clona/actualiza repo, monta Drive, copia parquets a `/content/processed_local`, define `RESULTADOS_DIR`; imports, paleta, `FRANJAS` |
 | 2 | Carga | `PERS_COLS` / `HOG_COLS` con `load_panel` + `pd.to_numeric`; hogares filtrados a `CH03==1` |
 | 3 | Indicadores | `ind_personas(g)` / `ind_hogares(g)` → DataFrame `ind` (% por trimestre) |
-| 4 | Normalización | `DIMENSIONES`, `COMPLEMENTARIOS`, `percentil_orientado`, `armar_termometro`, `termo` |
+| 4 | Normalización | `DIMENSIONES`, `COMPLEMENTARIOS`, `SIGNO`, `percentil_orientado`, `armar_termometro`, `termo` |
 | 5 | Termómetro hoy | termómetro vertical + dimensiones vs mismo trimestre del año anterior |
-| 6-8 | Gráficos | evolución (con media móvil 4T y franjas), dimensiones, mapa de calor de percentiles |
-| 9 | Tabla | último trimestre vs año anterior, percentil y sentido de cada indicador |
-| 10 | Diagnóstico de candidatas | `CANDIDATAS`, distribución de códigos por esquema, 6 criterios, índice actual vs con candidatas |
-| 11 | Exportar | `carga_EPH/resultados/termometro_EPH.csv` |
+| 6 | Lectura del último trimestre | `resumen_trimestre(q)` → texto Markdown (`resumen`): ranking y "desde cuándo", variación i.a. con aporte por dimensión (Δdim/3), media móvil, indicadores en récord o percentil ≥ 80, mayores movimientos i.a. (Δpercentil ≥ 20), complementarios que se movieron ≥ 1 pp |
+| 7-9 | Gráficos | evolución (con media móvil 4T y franjas), dimensiones, mapa de calor de percentiles |
+| 10 | Tabla | último trimestre vs año anterior, percentil y sentido de cada indicador |
+| 11 | Promedios anuales | `anual` (con `Trimestres` para marcar el año incompleto) + barras por franja |
+| 12 | Controles de calidad | cobertura de indicadores, tamaño de muestra del último trimestre, chequeo de sentido automático (✓/⚠), códigos de `PP11O` por esquema |
+| 13 | Exportar | `termometro_EPH.csv`, `termometro_EPH_anual.csv`, `termometro_EPH_resumen.md` en `carga_EPH/resultados/` |
+| A | Diagnóstico de candidatas | `CANDIDATAS` (vacío por defecto: no hace nada), 6 criterios, índice actual vs con candidatas; registro de evaluaciones |
+| B | Historial de versiones | v1 → v3 y reorganización del notebook |
 
 Piezas clave:
 - `DIMENSIONES`: dict dimensión → {indicador: signo} (+1 = más alto es peor, -1 = invertido).
   Para sumar/quitar un indicador del índice: calcularlo en la sección 3 y editar ese dict.
+  `SIGNO` se deriva de él (indicador → signo).
 - `percentil_orientado(s, signo)`: rank promedio sobre `signo * s.round(1)` → 0-100.
 - `armar_termometro(dimensiones)` → `(norm, dims, termómetro)`; termómetro = media de las
   dimensiones, cada dimensión = media de los percentiles de sus indicadores.
-- **Agregar una candidata**: calcularla en la sección 3, listarla en `COMPLEMENTARIOS` y en
-  `CANDIDATAS` (`nombre: (dimensión, signo)`), sumar su variable al loop de distribución de
-  códigos, correr en Colab y leer la sección 10. Criterios: cobertura desde 2017; códigos
-  estables entre esquemas; peor en pandemia (2020T2-2021T1) que en el valle 2023T3-T4;
-  autocorrelación lag1 ≥ 0,3; Spearman con el termómetro ≥ 0,3; |corr| < 0,85 con cada
-  indicador del índice.
+- `resumen_trimestre(q)` funciona para cualquier trimestre (útil para comparar episodios);
+  `posicion(serie, q)` decide si describirlo como "más alto" o "más bajo" según su ranking.
+- **Agregar una candidata** (Anexo A): calcularla en la sección 3, listarla en
+  `COMPLEMENTARIOS` y en `CANDIDATAS` como
+  `{"nombre": {"dimension": ..., "signo": ..., "variable": "PP03C", "universo": "ocupados"}}`,
+  correr en Colab y leer el anexo. Criterios: cobertura desde 2017; códigos estables entre
+  esquemas; peor en pandemia (2020T2-2021T1) que en el valle 2023T3-T4; autocorrelación
+  lag1 ≥ 0,3; Spearman con el termómetro ≥ 0,3; |corr| < 0,85 con cada indicador del índice.
 - **Efecto composición:** en shocks que destruyen empleo precario (2020T2), los indicadores
   calculados sobre ocupados mejoran artificialmente. Por eso B incluye una tasa sobre
-  población (asalariados registrados). **Chequeo de sentido** tras cualquier cambio:
-  2020T2-2021T1 alto, 2023T3-T4 bajo, máximo en 2020T4.
+  población (asalariados registrados). **Chequeo de sentido** (automatizado en la sección
+  12): máximo en 2019-2021, pandemia 2020T2-2021T1 > 66 en promedio, valle 2023T3-T4 ≤ 33.
 - Los percentiles son relativos a la historia disponible: al sumar trimestres, los valores
   históricos del índice pueden moverse levemente (esperable, no un bug).
 - Códigos de variables verificados contra el PDF oficial `EPH_registro_4T2025.pdf`; ver
@@ -133,11 +140,16 @@ Piezas clave:
 1. Armar un parquet de un trimestre real: leer los `.xlsx`/`.txt` del INDEC, unir con
    `merge_individual_hogar`, agregar `ANIO`/`TRIMESTRE`, `_fix_mixed_type_columns`, guardar.
 2. Generar trimestres sintéticos remuestreando hogares (`CODUSU`+`NRO_HOGAR` con reemplazo),
-   con etiquetas que incluyan 2020T2-2021T1 y 2023T3-T4 (la sección 10 las usa) y sin
+   con etiquetas que incluyan 2020T2-2021T1 y 2023T3-T4 (las secciones 12 y A las usan) y sin
    `EMPLEO`/`SECTOR` en los previos a 2023T4.
 3. Extraer las celdas de código (salteando el setup de Colab), fijar `PROCESSED_DIR`,
    `RESULTADOS_DIR`, backend `Agg`, reemplazar `list_available_quarters` por una lectura de
-   los parquets, y ejecutar. En Windows usar `PYTHONIOENCODING=utf-8` (la tabla usa ↑/↓).
+   los parquets, reemplazar `display` por `print`, y ejecutar. En Windows usar
+   `PYTHONIOENCODING=utf-8` (la tabla usa ↑/↓ y los chequeos ✓/⚠). Con datos sintéticos
+   el chequeo de sentido da ⚠ (esperable: no tienen la historia real).
+4. La lectura automática (sección 6) se puede testear con datos reales sin correr el
+   notebook: leer el `termometro_EPH.csv` exportado, reconstruir `ind` (`pct_`), `norm`
+   (`perc_`), `dims` y `termo`, y ejecutar solo las definiciones de la celda 4 y la celda 6.
 
 ## 7. Entorno
 

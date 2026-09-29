@@ -365,4 +365,5 @@ Códigos confirmados en `EPH_registro_4T2025.pdf` (2026-09-29). Niveles de T4-20
 
 Todas estas variables existen en ambos esquemas (antes y después de 4T2023), salvo
 `EMPLEO`/`SECTOR`. La distribución de `PP11O` y `PP03C` es estable entre esquemas
-(verificado en la sección 10 del notebook 06).
+(verificado en el diagnóstico de candidatas del notebook 06, hoy Anexo A; `PP11O` se sigue
+monitoreando en la sección 12).

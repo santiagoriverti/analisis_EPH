@@ -39,7 +39,7 @@ analisis_EPH/
 
 El notebook **00** es el punto de partida: **compila** las bases (une individuos+hogares
 de todos los trimestres) y genera los datasets procesados en `data/processed/`. El resto
-de los notebooks (01-05) **parten de esos datasets** ya compilados, en lugar de descargar
+de los notebooks (01-06) **parten de esos datasets** ya compilados, en lugar de descargar
 y unir las bases de nuevo.
 
 | Notebook | Tema | Colab |
@@ -50,7 +50,7 @@ y unir las bases de nuevo.
 | `03_ingresos_pobreza.ipynb` | Distribución del ingreso (IPCF), deciles, Gini, brechas D10/D1 | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/03_ingresos_pobreza.ipynb) |
 | `04_vivienda.ipynb` | Tipo de vivienda, tenencia, servicios (agua/cloaca), hacinamiento, déficit | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/04_vivienda.ipynb) |
 | `05_educacion.ipynb` | Nivel educativo, asistencia escolar, público/privado, analfabetismo | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/05_educacion.ipynb) |
-| `06_termometro.ipynb` | **Termómetro de la economía de los hogares**: índice de malestar 0-100 (cantidad de empleo y despidos, calidad del empleo, estrategias de supervivencia de los hogares), percentil histórico, evolución, mapa de calor, diagnóstico de variables candidatas y CSV en Drive | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/06_termometro.ipynb) |
+| `06_termometro.ipynb` | **Termómetro de la economía de los hogares**: índice de malestar 0-100 (cantidad de empleo y despidos, calidad del empleo, estrategias de supervivencia de los hogares): lectura automática del último trimestre, evolución, mapa de calor, promedios anuales, controles de calidad y exportación a Drive | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/06_termometro.ipynb) |
 
 **Cobertura actual:** 37 trimestres, **T1-2017 → T1-2026** (todos los notebooks validados en Colab).
 
@@ -90,7 +90,7 @@ df = load_panel(columns=["CH06", "CH04", "REGION", "PONDERA"])  # ej. demografí
 ## Termómetro de la economía de los hogares (notebook 06)
 
 Índice trimestral de **malestar** de 0 (mejor trimestre de la serie) a 100 (peor), con
-tres dimensiones de igual peso:
+tres dimensiones de igual peso. No usa ingresos ni pobreza (no depende de deflactores).
 
 | Dimensión | Indicadores |
 |---|---|
@@ -98,17 +98,44 @@ tres dimensiones de igual peso:
 | Calidad del empleo | subocupación, ocupados que buscan otro empleo, asalariados sin descuento jubilatorio, tasa de asalariados registrados |
 | Estrés de los hogares | gastaron ahorros, préstamos de familiares, vendieron pertenencias, recibieron alimentos (gobierno/instituciones o familiares) |
 
-Cada indicador se ubica en su percentil histórico (2017 en adelante). Franjas: Templado
-(≤33), Tibio (≤66), Fiebre (>66). No usa ingresos ni pobreza (no requiere deflactar).
+**Cómo se calcula:** cada indicador se ubica en su percentil histórico (2017 en adelante,
+orientado para que 100 = peor); cada dimensión promedia sus indicadores y el termómetro
+promedia las tres dimensiones. Franjas: **Templado** (≤ 33), **Tibio** (≤ 66),
+**Fiebre** (> 66). Es una medida *relativa a la historia*: 60 = peor que el 60% de los
+trimestres observados.
 
-**Resultados (T1-2017 → T1-2026):** máximo en 2020T4 (82), mínimo en 2017T4 (20) y
-2023T3 (22). **2026T1 = 60 (Tibio), +11 puntos interanual**: la cantidad de empleo está en
-valores intermedios (35), pero la calidad del empleo (66) y el estrés de los hogares (79)
-están en niveles altos; los asalariados sin descuento jubilatorio (37,9%) son el máximo de
-la serie.
+**Qué muestra el notebook:** termómetro del último trimestre y sus dimensiones frente al
+año anterior; una **lectura automática en texto** (posición en la serie, qué dimensión
+explica la variación interanual, indicadores en récord y mayores movimientos); evolución
+trimestral y por dimensión; mapa de calor de indicadores; tabla del último trimestre;
+promedios anuales; **controles de calidad** automáticos (cobertura, tamaño de muestra,
+chequeo de sentido, códigos de `PP11O`); y, en anexos, la herramienta para evaluar
+indicadores candidatos y el historial de versiones.
+
+**Salidas** (en Drive, `carga_EPH/resultados/`, CSV con `;` y decimal `,`):
+`termometro_EPH.csv` (serie trimestral completa), `termometro_EPH_anual.csv` y
+`termometro_EPH_resumen.md` (la lectura del último trimestre).
+
+**Resultados (v3, T1-2017 → T1-2026):**
+
+| Año | 2017 | 2018 | 2019 | 2020 | 2021 | 2022 | 2023 | 2024 | 2025 | 2026 (T1) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Termómetro | 29,9 | 43,8 | 65,9 | 72,3 | 64,4 | 41,6 | 26,2 | 49,0 | 54,3 | 60,0 |
+
+- Máximo en 2020T4 (82,1); mínimos en 2017T4 (20,4) y 2023T3 (22,4).
+- **2026T1 = 60,0 (Tibio), +11,0 puntos interanual**, el valor más alto desde 2021T2 (10.º
+  de 37). La suba la explican el estrés de los hogares (+7,4) y la calidad del empleo
+  (+6,7); la cantidad de empleo resta (−3,1). Hay empleo, pero más precario (asalariados
+  sin descuento jubilatorio 37,9% = máximo de la serie) y los hogares usan reservas
+  (préstamos de familiares p90, gastaron ahorros p89, vendieron pertenencias p81).
+
+**Actualización trimestral:** después de correr el 00 con el trimestre nuevo, correr el 06
+completo y revisar la sección 12 (todos ✓). El anexo A no hace falta (no hace nada salvo
+que se carguen candidatas).
 
 El notebook se genera con `python tools/gen_06_termometro.py` (no editar el `.ipynb` a
-mano). Detalle metodológico en [`docs/TECNICO.md`](docs/TECNICO.md) §6.
+mano). Detalle metodológico en [`docs/TECNICO.md`](docs/TECNICO.md) §6 y diccionario de
+variables en [`.claude/memoria_EPH.md`](.claude/memoria_EPH.md) §9.
 
 ## Continuar en otra PC
 

@@ -56,19 +56,26 @@ Funciona como un termómetro de **malestar**: **0 = mejor trimestre de la serie,
 **Metodología:**
 1. Cada indicador se calcula por trimestre, ponderado con `PONDERA` (hogares: un registro
    por hogar, el jefe/a `CH03==1`).
-2. Se orienta para que "más alto = peor" (la tasa de empleo se invierte) y se normaliza
+2. Se orienta para que "más alto = peor" (las tasas de empleo se invierten) y se normaliza
    como **percentil dentro de su propia historia** 2017-hoy (0 = mejor valor observado,
    100 = peor). Percentiles en lugar de min-max para que un outlier (2020T2) no aplaste
-   el resto de la serie.
+   el resto de la serie. Antes de rankear se redondea a 1 decimal (diferencias < 0,1 pp
+   son ruido muestral y empatan).
 3. Dimensión = promedio de sus indicadores; **Termómetro = promedio simple de las 3
    dimensiones** (cada dimensión pesa 1/3).
+4. Franjas: **Templado** (≤ 33), **Tibio** (≤ 66), **Fiebre** (> 66).
+
+**Cómo leerlo:** el valor es *relativo a la historia disponible* (2017-hoy): 60 significa
+"peor que el 60% de los trimestres observados", no un nivel absoluto. Al sumar trimestres
+los valores pasados pueden moverse levemente. Hay estacionalidad (el T1 suele ser peor), por
+eso conviene mirar la **variación interanual** y la **media móvil de 4 trimestres**.
 
 **Quedan fuera del índice (se muestran como complementarios):**
 - Préstamos bancarios (`V15`) y compras en cuotas/fiado (`V16`): suben tanto por estrés como
   por mayor acceso al crédito (señal ambigua).
 - Informalidad `EMPLEO`: solo existe desde 2023T4 (en el índice se usa `PP07H`, serie larga).
-- Pluriempleo (`PP03C==2`): evaluado y descartado en la sección 10 (es procíclico: cae en
-  la pandemia y en cada T1, se comporta como un indicador de empleo, no de estrés).
+- Pluriempleo (`PP03C==2`): evaluado y descartado (Anexo A): es procíclico, cae en la
+  pandemia y en cada T1; se comporta como un indicador de empleo, no de estrés.
 - Desalentados (`PP02E==3`) y niños <10 que aportan dinero (`V19_A/B`): niveles de 0,0-0,4%,
   donde la diferencia entre trimestres es ruido muestral; además los desalentados *bajan*
   en 2020 (en cuarentena no se buscaba trabajo por otras razones).
@@ -79,11 +86,16 @@ calculados *sobre los ocupados* (informalidad, subocupación, ocupados que busca
 **mejoraron** artificialmente. La tasa de empleo asalariado registrado sobre la población no
 tiene ese sesgo y compensa la dimensión.
 
-**Advertencias:** la EPH cubre 31 aglomerados urbanos y se publica ~3 meses después del
-trimestre. 2020T2-T3 se relevó telefónicamente (pandemia). Hay estacionalidad (el T1 suele
-ser peor), por eso también se muestra la **variación interanual** y la media móvil de 4
-trimestres. Etapa 2 (pendiente): ingresos reales (`P21`, `IPCF` deflactados por IPC) y
-pobreza por canastas.
+**Alcance y advertencias:** no usa ingresos ni pobreza (no depende de deflactores; los
+ingresos están en el notebook 03). La EPH cubre 31 aglomerados urbanos y se publica ~3 meses
+después del trimestre; 2020T2-T3 se relevó telefónicamente (pandemia).
+
+**Contenido:** 1-4 preparación (setup, carga, indicadores, normalización) · 5-6 el
+termómetro hoy (gráfico y lectura automática) · 7-9 evolución (índice, dimensiones, mapa de
+calor) · 10 tabla del último trimestre · 11 promedios anuales · 12 controles de calidad ·
+13 exportar · Anexo A diagnóstico de candidatas · Anexo B historial de versiones.
+
+*Versión del índice: v3 (2026-09).*
 """)
 
 md("## 1. Setup (Colab)")
@@ -213,7 +225,7 @@ def ind_personas(g):
         "Asalariados sin descuento jubilatorio": pct(w, g["PP07H"] == 2, asal),
         "Tasa de empleo asalariado registrado": pct(w, asal & (g["PP07H"] == 1), todos),
         "Desocupados por despido (incl. renuncia forzada)": w[desoc & g["PP11O"].isin([1, 7])].sum() / d * 100,  # 1 despido/cierre, 7 renuncia obligada/pactada
-        # complementario (evaluado y descartado para el índice, ver sección 10)
+        # complementario (evaluado y descartado para el índice, ver Anexo A)
         "Pluriempleo": pct(w, g["PP03C"] == 2, ocup),
         # complementario (solo desde 2023T4)
         "Informalidad (EMPLEO)": pct(w, g["EMPLEO"] == 2, ocup) if g["EMPLEO"].notna().any() else np.nan,
@@ -264,6 +276,7 @@ DIMENSIONES = {
 COMPLEMENTARIOS = ["Informalidad (EMPLEO)", "Préstamos de bancos/financieras", "Compras en cuotas/fiado",
                    "Desalentados", "Niños <10 aportan dinero",
                    "Pluriempleo"]
+SIGNO = {c: s for cols in DIMENSIONES.values() for c, s in cols.items()}  # indicador -> signo
 
 def percentil_orientado(s, signo):
     """0 = mejor valor de la serie, 100 = peor.
@@ -350,7 +363,105 @@ if hace_un_anio is not None:
 ''')
 
 md("""
-## 6. Evolución del termómetro
+## 6. Lectura del último trimestre
+
+Resumen en texto generado a partir de los datos (se actualiza solo con cada trimestre nuevo
+y se exporta en la sección 13). Incluye la posición del trimestre en la serie, qué
+dimensión explica la variación interanual (cada dimensión aporta 1/3 de su cambio) y qué
+indicadores están en niveles extremos o se movieron más.
+""")
+
+code(r'''
+from IPython.display import Markdown, display
+
+def f1(x, signo=False):
+    """Número con 1 decimal y coma decimal (signo explícito opcional)."""
+    return (f"{x:+.1f}" if signo else f"{x:.1f}").replace(".", ",").replace("-", "−")
+
+def posicion(serie, q, fem=False):
+    """Ranking de q en la serie y desde cuándo no había un valor tan alto (o tan bajo).
+
+    Devuelve (texto del ranking, texto "desde cuándo" o None si no hay trimestres previos).
+    """
+    serie = serie.dropna()
+    v, n = serie[q], len(serie)
+    alto = int(serie.rank(ascending=False, method="min")[q])
+    bajo = int(serie.rank(ascending=True, method="min")[q])
+    palabra = "alto" if alto <= bajo else "bajo"
+    art = ("la más " + palabra[:-1] + "a") if fem else ("el valor más " + palabra)
+    ranking = f"{min(alto, bajo)}.º trimestre más {palabra} de {n}"
+    previos = serie.loc[:q].iloc[:-1]
+    if previos.empty:
+        return ranking, None
+    iguales = previos[previos >= v] if palabra == "alto" else previos[previos <= v]
+    if iguales.empty:
+        return ranking, f"{art} de la serie" + ("" if q == serie.index[-1] else " hasta entonces")
+    return ranking, f"{art} desde {iguales.index[-1]}"
+
+def resumen_trimestre(q):
+    t_ = termo["Termómetro"]
+    ma = termo["Media móvil 4T"]
+    i = termo.index.get_loc(q)
+    q_ia = termo.index[i - 4] if i >= 4 else None
+    q_ant = termo.index[i - 1] if i >= 1 else None
+    L = [f"### Termómetro {q}: {f1(t_[q])} ({franja(t_[q])})", ""]
+
+    ranking, desde = posicion(t_, q)
+    L.append(f"- **Posición:** {ranking}" + (f" ({desde})." if desde else "."))
+    if q_ia is not None:
+        contrib = ((dims.loc[q] - dims.loc[q_ia]) / len(DIMENSIONES)).sort_values(key=abs, ascending=False)
+        partes = ", ".join(f"{n.split('. ')[1].lower()} {f1(c, True)}" for n, c in contrib.items())
+        L.append(f"- **Interanual:** {f1(t_[q_ia])} en {q_ia} → {f1(t_[q])} "
+                 f"(**{f1(t_[q] - t_[q_ia], True)} pts**). Aporte por dimensión: {partes}.")
+    if q_ant is not None:
+        L.append(f"- **Trimestral:** {f1(t_[q] - t_[q_ant], True)} pts frente a {q_ant} "
+                 f"(afectado por estacionalidad).")
+    if pd.notna(ma[q]):
+        _, desde = posicion(ma, q, fem=True)
+        L.append(f"- **Media móvil 4T:** {f1(ma[q])}" + (f" ({desde})." if desde else "."))
+    L.append("- **Dimensiones:** " + " · ".join(
+        f"{n} {f1(dims.loc[q, n])} ({franja(dims.loc[q, n])})" for n in DIMENSIONES) + ".")
+
+    # Indicadores en el peor / mejor valor de la serie (con el redondeo a 1 decimal del índice)
+    orient = pd.DataFrame({c: s * ind[c].round(1) for c, s in SIGNO.items()})
+    peor = [c for c in SIGNO if orient.loc[q, c] == orient[c].max()]
+    mejor = [c for c in SIGNO if orient.loc[q, c] == orient[c].min()]
+    if peor:
+        L.append("- **En su peor nivel de la serie:** " +
+                 "; ".join(f"{c} ({f1(ind.loc[q, c])}%)" for c in peor) + ".")
+    if mejor:
+        L.append("- **En su mejor nivel de la serie:** " +
+                 "; ".join(f"{c} ({f1(ind.loc[q, c])}%)" for c in mejor) + ".")
+    altos = norm.loc[q].loc[lambda s: (s >= 80)].sort_values(ascending=False).drop(peor, errors="ignore")
+    if len(altos):
+        L.append("- **Otros indicadores altos (percentil ≥ 80):** " +
+                 "; ".join(f"{c} {f1(ind.loc[q, c])}% (p{norm.loc[q, c]:.0f})" for c in altos.index) + ".")
+
+    if q_ia is not None:
+        mov = (norm.loc[q] - norm.loc[q_ia]).sort_values()
+        def txt(cs):
+            return "; ".join(f"{c} {f1(ind.loc[q, c])}% ({f1(ind.loc[q, c] - ind.loc[q_ia, c], True)} pp, "
+                             f"p{norm.loc[q_ia, c]:.0f}→p{norm.loc[q, c]:.0f})" for c in cs)
+        subas = mov[mov >= 20].index[::-1][:3]
+        bajas = mov[mov <= -20].index[:3]
+        if len(subas):
+            L.append(f"- **Mayores deterioros interanuales:** {txt(subas)}.")
+        if len(bajas):
+            L.append(f"- **Mayores mejoras interanuales:** {txt(bajas)}.")
+        comp = [c for c in COMPLEMENTARIOS
+                if pd.notna(ind.loc[q, c]) and pd.notna(ind.loc[q_ia, c])
+                and abs(ind.loc[q, c] - ind.loc[q_ia, c]) >= 1]
+        if comp:
+            L.append("- **Complementarios que se movieron ≥ 1 pp i.a.:** " + "; ".join(
+                f"{c} {f1(ind.loc[q, c])}% ({f1(ind.loc[q, c] - ind.loc[q_ia, c], True)} pp)" for c in comp) + ".")
+    return "\n".join(L)
+
+resumen = resumen_trimestre(ult)
+display(Markdown(resumen))
+''')
+
+md("""
+## 7. Evolución del termómetro
 
 Índice trimestral, media móvil de 4 trimestres (suaviza la estacionalidad) y franjas.
 """)
@@ -378,9 +489,9 @@ plt.show()
 ''')
 
 md("""
-## 7. Evolución por dimensión
+## 8. Evolución por dimensión
 
-Una línea por dimensión (percentil histórico promedio de sus indicadores).
+Una línea por dimensión (percentil histórico promedio de sus indicadores, media móvil 4T).
 """)
 
 code(r'''
@@ -406,7 +517,7 @@ plt.show()
 ''')
 
 md("""
-## 8. Mapa de calor de los indicadores
+## 9. Mapa de calor de los indicadores
 
 Cada celda es el percentil histórico del indicador en ese trimestre (más oscuro = peor).
 Permite ver qué indicadores "empujan" el termómetro en cada momento.
@@ -432,11 +543,11 @@ plt.show()
 ''')
 
 md("""
-## 9. Tabla del último trimestre
+## 10. Tabla del último trimestre
 
 Valor de cada indicador (en %), el mismo trimestre del año anterior, la diferencia
 (puntos porcentuales) y su percentil histórico. Incluye los indicadores complementarios
-(fuera del índice).
+(fuera del índice, sin percentil).
 """)
 
 code(r'''
@@ -460,108 +571,107 @@ tabla.round(1)
 ''')
 
 md("""
-## 10. Diagnóstico de variables candidatas
+## 11. Promedios anuales
 
-Herramienta para evaluar si conviene sumar un indicador al índice: se agrega su cálculo en
-la sección 3 y se lo lista en `CANDIDATAS` (nombre → dimensión y signo).
-
-**Evaluaciones realizadas (2026-09, serie 2017T1-2026T1):**
-
-| Candidata | Resultado | Motivo |
-|---|---|---|
-| Desocupados por despido/cierre (`PP11O==1`) | ✅ **Incorporada a A** (luego ampliada con el código 7, renuncia obligada/pactada = despido encubierto; ~2% de los desocupados) | Pasa los 6 criterios: códigos estables entre esquemas (12,7% → 14,2% de los desocupados), pandemia 1,44% vs valle 0,56%, autocorrelación 0,76, Spearman con termómetro 0,60, corr. máx. 0,83 (con desocupación). Sin estacionalidad. Sube antes en 2018T3-T4 y 2024T1. |
-| Pluriempleo (`PP03C==2`) | ❌ **Descartada** (queda como complementaria) | Procíclica: cae en pandemia (7,8% vs 11,2% en el valle 2023) y en cada T1 (8,4% vs 10,1%); corr. 0,77 con la tasa de empleo; leve cambio de códigos con el esquema 4T2023. |
-
-**Criterios (todos deben cumplirse):**
-1. **Cobertura:** datos en todos los trimestres desde 2017 (ambos esquemas).
-2. **Códigos estables:** la distribución de `PP11O`/`PP03C` no cambia bruscamente con el quiebre
-   de esquema de 4T2023 (si cambia, el código pudo cambiar de significado).
-3. **Sentido:** peor (más alto) en la pandemia (2020T2-2021T1) que en el valle 2023T3-T4.
-4. **Señal, no ruido:** autocorrelación de orden 1 ≥ 0,3 (la serie tiene persistencia).
-5. **Relación con el índice:** correlación de Spearman con el termómetro actual ≥ 0,3.
-6. **No redundante:** correlación absoluta < 0,85 con cada indicador que ya está en el índice.
+Promedio de los trimestres de cada año (dimensiones y termómetro). El año en curso suele
+estar incompleto (columna `Trimestres`): no es comparable con un año completo porque el
+T1 tiende a ser peor.
 """)
 
 code(r'''
-# Candidatas a evaluar: nombre del indicador (sección 3) -> (dimensión, signo).
-# Se deja Pluriempleo como ejemplo (ya evaluada y descartada).
-CANDIDATAS = {"Pluriempleo": ("C. Estrés de los hogares", +1)}
-PANDEMIA = ["2020T2", "2020T3", "2020T4", "2021T1"]
-VALLE = ["2023T3", "2023T4"]
-en_indice = [c for cols in DIMENSIONES.values() for c in cols]
+anio = termo.index.str[:4]
+anual = termo[[*DIMENSIONES, "Termómetro"]].groupby(anio).mean()
+anual.insert(0, "Trimestres", termo.groupby(anio).size())
+anual["Estado"] = anual["Termómetro"].map(franja)
+anual.index.name = "Año"
 
-# Criterio 2: distribución de códigos antes/después del quiebre de esquema 4T2023
-pers["esquema"] = np.where(pers["ANIO"] * 10 + pers["TRIMESTRE"] >= 20234, "desde 2023T4", "hasta 2023T3")
-# PP11O se sigue monitoreando porque está en el índice (códigos 1 y 7)
-for var, filtro in [("PP11O", pers["ESTADO"] == 2), ("PP03C", pers["ESTADO"] == 1)]:
-    sub = pers[filtro]
-    dist = (sub.groupby(["esquema", var])["PONDERA"].sum()
-               .groupby(level=0).transform(lambda x: x / x.sum() * 100).unstack(0))
-    print(f"\nDistribución de {var} (% ponderado):")
-    print(dist.round(1).to_string())
-
-filas = []
-for c, (dim, signo) in CANDIDATAS.items():
-    s = ind[c]
-    corr_ind = ind[en_indice].corrwith(s, method="spearman").abs()
-    chk = {
-        "Primer trimestre con dato": s.first_valid_index(),
-        "Trimestres sin dato": int(s.isna().sum()),
-        "Media pandemia": s.loc[PANDEMIA].mean(),
-        "Media valle 2023": s.loc[VALLE].mean(),
-        "Autocorrelación lag 1": s.autocorr(1),
-        "Spearman con termómetro": s.corr(termo["Termómetro"], method="spearman"),
-        "Máx. corr. con indicador del índice": corr_ind.max(),
-        "Indicador más parecido": corr_ind.idxmax(),
-    }
-    ok = {
-        "1. Cobertura": chk["Trimestres sin dato"] == 0 and chk["Primer trimestre con dato"] == ind.index[0],
-        "3. Sentido": signo * (chk["Media pandemia"] - chk["Media valle 2023"]) > 0,
-        "4. Señal": chk["Autocorrelación lag 1"] >= 0.3,
-        "5. Relación": signo * chk["Spearman con termómetro"] >= 0.3,
-        "6. No redundante": chk["Máx. corr. con indicador del índice"] < 0.85,
-    }
-    filas.append({"Candidata": c, **chk, **ok, "Pasa (sin contar criterio 2)": all(ok.values())})
-
-diag = pd.DataFrame(filas).set_index("Candidata").T
-diag
-''')
-
-code(r'''
-# Serie de cada candidata, con pandemia y valle 2023 sombreados
-fig, axes = plt.subplots(1, len(CANDIDATAS), figsize=(13, 4.5), sharex=True)
-for ax, c in zip(np.atleast_1d(axes), CANDIDATAS):
-    for rango, nombre in [(PANDEMIA, "Pandemia"), (VALLE, "Valle 2023")]:
-        i0, i1 = ind.index.get_loc(rango[0]), ind.index.get_loc(rango[-1])
-        ax.axvspan(i0 - 0.5, i1 + 0.5, color="#e4e3df", lw=0)
-        ax.text((i0 + i1) / 2, 1.01, nombre, transform=ax.get_xaxis_transform(),
-                ha="center", va="bottom", color="#52514e", fontsize=8)
-    ax.plot(x, ind[c], color=TINTA, lw=2, marker="o", ms=3)
-    ax.set_title(c + " (%)", pad=16)
-    ax.set_xticks(x[::4], ind.index[::4], rotation=90)
+col_franja = {nombre: col for _, _, col, nombre in FRANJAS}
+fig, ax = plt.subplots(figsize=(11, 4.8))
+xa = np.arange(len(anual))
+for i, (a, r) in enumerate(anual.iterrows()):
+    incompleto = r["Trimestres"] < 4
+    ax.bar(i, r["Termómetro"], color=col_franja[r["Estado"]], alpha=0.35 if incompleto else 0.85,
+           hatch="//" if incompleto else None, edgecolor="#8a8984" if incompleto else "none", width=0.7)
+    ax.text(i, r["Termómetro"] + 1.5, f"{r['Termómetro']:.0f}", ha="center", va="bottom", color=TINTA)
+ax.set_xticks(xa, [a if n == 4 else f"{a}\n({n}T)" for a, n in zip(anual.index, anual["Trimestres"])])
+ax.set_ylim(0, 100); ax.set_ylabel("Termómetro (promedio anual)")
+ax.set_title("Termómetro por año")
+ax.legend(handles=[mpatches.Patch(color=col, alpha=0.85, label=nombre) for _, _, col, nombre in FRANJAS],
+          loc="upper left", frameon=False, ncol=3)
 plt.tight_layout()
 plt.show()
 
-# Efecto sobre el índice si se agregaran las candidatas
-dims_con = {d: dict(cols) for d, cols in DIMENSIONES.items()}
-for c, (dim, signo) in CANDIDATAS.items():
-    dims_con[dim][c] = signo
-_, _, t_con = armar_termometro(dims_con)
-comp = pd.DataFrame({"Actual": termo["Termómetro"], "Con candidatas": t_con})
-comp["Diferencia"] = comp["Con candidatas"] - comp["Actual"]
-print(f"Correlación actual vs. con candidatas: {comp['Actual'].corr(comp['Con candidatas']):.3f} | "
-      f"diferencia máx.: {comp['Diferencia'].abs().max():.1f} pts")
-print(f"Máximo: {comp['Actual'].idxmax()} -> {comp['Con candidatas'].idxmax()} | "
-      f"mínimo: {comp['Actual'].idxmin()} -> {comp['Con candidatas'].idxmin()}")
-comp.loc[["2019T2", *PANDEMIA, *VALLE, "2024T1", "2025T1", termo.index[-1]]].round(1)
+anual.round(1)
 ''')
 
 md("""
-## 11. Exportar
+## 12. Controles de calidad
 
-Guarda la serie completa (indicadores en %, percentiles, dimensiones y termómetro) en
-Drive: `carga_EPH/resultados/termometro_EPH.csv` (separador `;`, decimal `,` para abrir
-directo en Excel en español).
+Chequeos automáticos para correr después de sumar un trimestre (✓ = OK, ⚠ = revisar):
+
+1. **Cobertura:** todos los indicadores del índice tienen dato en todos los trimestres (un
+   faltante en el último trimestre suele indicar una columna que cambió de nombre en la base).
+2. **Tamaño de muestra:** el último trimestre tiene una cantidad de hogares normal (≥ 80% de
+   la mediana), para detectar cargas incompletas.
+3. **Chequeo de sentido:** el índice tiene que reconocer los episodios conocidos: máximo en
+   la crisis 2019-2021, pandemia (2020T2-2021T1) en Fiebre en promedio, valle 2023T3-T4 en
+   Templado.
+4. **Códigos estables de `PP11O`** (indicador de despidos): distribución entre desocupados
+   antes y después del cambio de esquema de 4T2023 (referencia: código 1 = 12,7% → 14,2%,
+   código 7 = 1,5% → 2,2%).
+""")
+
+code(r'''
+PANDEMIA = ["2020T2", "2020T3", "2020T4", "2021T1"]
+VALLE = ["2023T3", "2023T4"]
+
+def chequeo(ok, texto):
+    print(("✓ " if ok else "⚠ ") + texto)
+
+# 1. Cobertura
+faltan = ind[list(SIGNO)].isna()
+chequeo(not faltan.values.any(),
+        "Cobertura completa de los indicadores del índice" if not faltan.values.any() else
+        "Faltan datos: " + "; ".join(f"{c} en {', '.join(faltan.index[faltan[c]])}"
+                                     for c in faltan.columns if faltan[c].any()))
+
+# 2. Tamaño de muestra
+n_hog = hog.groupby(["ANIO", "TRIMESTRE"]).size()
+n_hog.index = [f"{a}T{p}" for a, p in n_hog.index]
+chequeo(n_hog.iloc[-1] >= 0.8 * n_hog.median(),
+        f"Hogares en {n_hog.index[-1]}: {n_hog.iloc[-1]:,} (mediana de la serie {n_hog.median():,.0f})".replace(",", "."))
+
+# 3. Chequeo de sentido
+t_ = termo["Termómetro"]
+q_max = t_.idxmax()
+chequeo("2019" <= q_max[:4] <= "2021", f"Máximo de la serie: {q_max} ({f1(t_.max())}), esperado en 2019-2021")
+if set(PANDEMIA) <= set(t_.index):
+    m = t_.loc[PANDEMIA].mean()
+    chequeo(m > 66, f"Pandemia 2020T2-2021T1: promedio {f1(m)} (esperado > 66, Fiebre)")
+if set(VALLE) <= set(t_.index):
+    m = t_.loc[VALLE].mean()
+    chequeo(m <= 33, f"Valle 2023T3-T4: promedio {f1(m)} (esperado ≤ 33, Templado)")
+
+# 4. Códigos de PP11O entre desocupados, por esquema
+pers["esquema"] = np.where(pers["ANIO"] * 10 + pers["TRIMESTRE"] >= 20234, "desde 2023T4", "hasta 2023T3")
+sub = pers[pers["ESTADO"] == 2]
+dist = (sub.groupby(["esquema", "PP11O"])["PONDERA"].sum()
+           .groupby(level=0).transform(lambda s: s / s.sum() * 100).unstack(0))
+print("\nPP11O entre desocupados (% ponderado; 1 = despido/cierre, 7 = renuncia obligada/pactada):")
+print(dist.round(1).to_string())
+''')
+
+md("""
+## 13. Exportar
+
+Guarda en Drive (`carga_EPH/resultados/`), con separador `;` y decimal `,` para abrir
+directo en Excel en español:
+
+| Archivo | Contenido |
+|---|---|
+| `termometro_EPH.csv` | serie trimestral completa: indicadores en % (`pct_`), percentiles (`perc_`), dimensiones, termómetro, media móvil, variación interanual y estado |
+| `termometro_EPH_anual.csv` | promedios anuales (sección 11) |
+| `termometro_EPH_resumen.md` | lectura del último trimestre (sección 6) |
 """)
 
 code(r'''
@@ -572,10 +682,151 @@ salida = pd.concat([
     termo,
 ], axis=1)
 salida.index.name = "trimestre"
-path = os.path.join(RESULTADOS_DIR, "termometro_EPH.csv")
-salida.to_csv(path, sep=";", decimal=",", encoding="utf-8-sig")
-print("Guardado:", path, "|", salida.shape)
+opts = dict(sep=";", decimal=",", encoding="utf-8-sig")
+archivos = {
+    "termometro_EPH.csv": lambda p: salida.to_csv(p, **opts),
+    "termometro_EPH_anual.csv": lambda p: anual.to_csv(p, **opts),
+    "termometro_EPH_resumen.md": lambda p: open(p, "w", encoding="utf-8").write(resumen + "\n"),
+}
+for nombre, guardar in archivos.items():
+    path = os.path.join(RESULTADOS_DIR, nombre)
+    guardar(path)
+    print("Guardado:", path)
+print("Serie trimestral:", salida.shape, "| anual:", anual.shape)
 ''')
+
+md("""
+## Anexo A. Diagnóstico de variables candidatas
+
+Herramienta para evaluar si conviene **sumar un indicador al índice**. No hace falta
+correrla en la actualización trimestral: con `CANDIDATAS` vacío no hace nada.
+
+**Cómo usarla:**
+1. Calcular el indicador en la sección 3 (`ind_personas` o `ind_hogares`) y agregarlo a
+   `COMPLEMENTARIOS` (sección 4); si usa una variable nueva, sumarla a `PERS_COLS`/`HOG_COLS`.
+2. Listarlo en `CANDIDATAS` (celda de abajo) con su dimensión, signo (+1 = más alto es
+   peor), la variable de origen y el universo donde mirar sus códigos.
+3. Correr el notebook y leer la tabla de criterios y el efecto sobre el índice.
+4. Si pasa, moverlo a `DIMENSIONES` y repetir el chequeo de sentido (sección 12).
+
+**Criterios (todos deben cumplirse):**
+1. **Cobertura:** datos en todos los trimestres desde 2017 (ambos esquemas).
+2. **Códigos estables:** la distribución de la variable no cambia bruscamente con el quiebre
+   de esquema de 4T2023 (si cambia, el código pudo cambiar de significado). Se evalúa a ojo.
+3. **Sentido:** peor (más alto) en la pandemia (2020T2-2021T1) que en el valle 2023T3-T4.
+4. **Señal, no ruido:** autocorrelación de orden 1 ≥ 0,3 (la serie tiene persistencia).
+5. **Relación con el índice:** correlación de Spearman con el termómetro actual ≥ 0,3.
+6. **No redundante:** correlación absoluta < 0,85 con cada indicador que ya está en el índice.
+
+**Evaluaciones realizadas (2026-09, serie 2017T1-2026T1):**
+
+| Candidata | Resultado | Motivo |
+|---|---|---|
+| Desocupados por despido/cierre (`PP11O==1`) | ✅ **Incorporada a A** (luego ampliada con el código 7, renuncia obligada/pactada = despido encubierto) | Pasa los 6 criterios: códigos estables entre esquemas (12,7% → 14,2% de los desocupados), pandemia 1,44% vs valle 0,56%, autocorrelación 0,76, Spearman con termómetro 0,60, corr. máx. 0,83 (con desocupación). Sin estacionalidad. Con 1+7: pandemia 1,62% vs valle 0,65%, autocorr. 0,74, corr. máx. 0,82. |
+| Pluriempleo (`PP03C==2`) | ❌ **Descartada** (queda como complementaria) | Procíclica: cae en pandemia (7,8% vs 11,2% en el valle 2023) y en cada T1 (8,4% vs 10,1%); Spearman con el termómetro −0,05; corr. 0,77 con la tasa de empleo. Sumarla movía el índice hasta 4,8 pts (bajaba la pandemia). |
+
+**Sin evaluar (ideas):** ex-cuentapropistas que cerraron por falta de clientes (`PP11L==1`,
+para sumar al indicador de despidos); jóvenes 18-24 que no estudian ni trabajan; asalariados
+temporarios (`PP07C==1`, sesgo de composición); desocupación de jefes de hogar (redundante
+con la desocupación).
+""")
+
+code(r'''
+# Candidatas a evaluar: nombre del indicador (sección 3) -> configuración.
+#   dimension: dimensión donde entraría | signo: +1 si más alto es peor
+#   variable: variable EPH de origen (para mirar sus códigos por esquema; None = no mirar)
+#   universo: "ocupados", "desocupados" o "todos" (filas donde mirar los códigos)
+# Ejemplo (ya evaluado y descartado):
+# CANDIDATAS = {"Pluriempleo": {"dimension": "C. Estrés de los hogares", "signo": +1,
+#                               "variable": "PP03C", "universo": "ocupados"}}
+CANDIDATAS = {}
+
+UNIVERSOS = {"ocupados": pers["ESTADO"] == 1, "desocupados": pers["ESTADO"] == 2,
+             "todos": pd.Series(True, index=pers.index)}
+
+if not CANDIDATAS:
+    print("Sin candidatas para evaluar (CANDIDATAS vacío). Ver instrucciones arriba.")
+else:
+    # Criterio 2: distribución de códigos antes/después del quiebre de esquema 4T2023
+    for c, cfg in CANDIDATAS.items():
+        var = cfg.get("variable")
+        if var is None:
+            continue
+        sub = pers[UNIVERSOS[cfg.get("universo", "todos")]]
+        dist = (sub.groupby(["esquema", var])["PONDERA"].sum()
+                   .groupby(level=0).transform(lambda s: s / s.sum() * 100).unstack(0))
+        print(f"\n{c}: distribución de {var} (% ponderado, universo {cfg.get('universo', 'todos')}):")
+        print(dist.round(1).to_string())
+
+    filas = []
+    for c, cfg in CANDIDATAS.items():
+        s, signo = ind[c], cfg["signo"]
+        corr_ind = ind[list(SIGNO)].corrwith(s, method="spearman").abs()
+        chk = {
+            "Primer trimestre con dato": s.first_valid_index(),
+            "Trimestres sin dato": int(s.isna().sum()),
+            "Media pandemia": s.loc[PANDEMIA].mean(),
+            "Media valle 2023": s.loc[VALLE].mean(),
+            "Autocorrelación lag 1": s.autocorr(1),
+            "Spearman con termómetro": s.corr(termo["Termómetro"], method="spearman"),
+            "Máx. corr. con indicador del índice": corr_ind.max(),
+            "Indicador más parecido": corr_ind.idxmax(),
+        }
+        ok = {
+            "1. Cobertura": chk["Trimestres sin dato"] == 0 and chk["Primer trimestre con dato"] == ind.index[0],
+            "3. Sentido": signo * (chk["Media pandemia"] - chk["Media valle 2023"]) > 0,
+            "4. Señal": chk["Autocorrelación lag 1"] >= 0.3,
+            "5. Relación": signo * chk["Spearman con termómetro"] >= 0.3,
+            "6. No redundante": chk["Máx. corr. con indicador del índice"] < 0.85,
+        }
+        filas.append({"Candidata": c, **chk, **ok, "Pasa (sin contar criterio 2)": all(ok.values())})
+    display(pd.DataFrame(filas).set_index("Candidata").T)
+''')
+
+code(r'''
+if CANDIDATAS:
+    # Serie de cada candidata, con pandemia y valle 2023 sombreados
+    fig, axes = plt.subplots(1, len(CANDIDATAS), figsize=(6.5 * len(CANDIDATAS), 4.5), squeeze=False)
+    for ax, c in zip(axes[0], CANDIDATAS):
+        for rango, nombre in [(PANDEMIA, "Pandemia"), (VALLE, "Valle 2023")]:
+            i0, i1 = ind.index.get_loc(rango[0]), ind.index.get_loc(rango[-1])
+            ax.axvspan(i0 - 0.5, i1 + 0.5, color="#e4e3df", lw=0)
+            ax.text((i0 + i1) / 2, 1.01, nombre, transform=ax.get_xaxis_transform(),
+                    ha="center", va="bottom", color="#52514e", fontsize=8)
+        ax.plot(x, ind[c], color=TINTA, lw=2, marker="o", ms=3)
+        ax.set_title(c + " (%)", pad=16)
+        ax.set_xticks(x[::4], ind.index[::4], rotation=90)
+    plt.tight_layout()
+    plt.show()
+
+    # Efecto sobre el índice si se agregaran las candidatas
+    dims_con = {d: dict(cols) for d, cols in DIMENSIONES.items()}
+    for c, cfg in CANDIDATAS.items():
+        dims_con[cfg["dimension"]][c] = cfg["signo"]
+    _, _, t_con = armar_termometro(dims_con)
+    comp = pd.DataFrame({"Actual": termo["Termómetro"], "Con candidatas": t_con})
+    comp["Diferencia"] = comp["Con candidatas"] - comp["Actual"]
+    print(f"Correlación actual vs. con candidatas: {comp['Actual'].corr(comp['Con candidatas']):.3f} | "
+          f"diferencia máx.: {comp['Diferencia'].abs().max():.1f} pts")
+    print(f"Máximo: {comp['Actual'].idxmax()} -> {comp['Con candidatas'].idxmax()} | "
+          f"mínimo: {comp['Actual'].idxmin()} -> {comp['Con candidatas'].idxmin()}")
+    display(comp.loc[["2019T2", *PANDEMIA, *VALLE, "2024T1", ult]].round(1))
+''')
+
+md("""
+## Anexo B. Historial de versiones del índice
+
+| Versión | Cambio | Por qué |
+|---|---|---|
+| **v1** | 3 dimensiones; A: desocupación, empleo, desocupación > 1 año, desalentados; B: subocupación, buscan otro empleo, sin descuento jubilatorio; C: `V13`, `V14`, `V17`, `V6`, `V7`, niños que aportan | Falló el chequeo de sentido: 2020T2 = 48 (dimensión B = 0,9) por **efecto composición**; desalentados y niños (~0,1%) metían ruido. |
+| **v2** | Desalentados y niños pasan a complementarios; B suma la tasa de empleo asalariado registrado sobre población; redondeo a 1 decimal antes de rankear | 2020T2 → 64,7; máximo en 2020T4. |
+| **v3** | A suma desocupados por despido/cierre (`PP11O==1`) y renuncia obligada/pactada (`PP11O==7`); pluriempleo evaluado y descartado | Pasó los 6 criterios del Anexo A; adelanta los deterioros (2018T3-T4, 2024T1). |
+| v3 (notebook, 2026-09-29) | Sin cambios en el índice. Se suman la lectura automática (6), promedios anuales (11), controles de calidad (12), exportación del anual y del resumen; el diagnóstico pasa a anexo y queda vacío por defecto | Dejar la corrida trimestral limpia y autoexplicada. |
+
+Referencia de resultados v3 (T1-2017 → T1-2026): máximo 2020T4 = 82,1; mínimo 2017T4 = 20,4;
+valle 2023T3 = 22,4; 2020T2 = 65,7; 2026T1 = 60,0 (Tibio, +11,0 i.a.). Al sumar trimestres
+estos valores pueden moverse levemente (los percentiles se recalculan con toda la historia).
+""")
 
 nb = {"cells": cells,
       "metadata": {"kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"},

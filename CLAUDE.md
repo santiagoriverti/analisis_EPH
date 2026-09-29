@@ -15,7 +15,8 @@ Proyecto de notebooks (Google Colab) de análisis de la EPH del INDEC.
 ## Estado (2026-09-29)
 
 7 notebooks validados en Colab (00 compilador + 01 demografía, 02 laboral, 03 ingresos,
-04 vivienda, 05 educación, 06 termómetro 0-100, versión v3) con **37 trimestres
+04 vivienda, 05 educación, 06 termómetro 0-100, índice v3 con lectura automática, promedios
+anuales y controles de calidad) con **37 trimestres
 T1-2017 → T1-2026**. Pendientes e ideas en el HANDOFF de la memoria.
 Datos: `.zip` del INDEC en Google Drive (`carga_EPH`), compilados a parquets por
 trimestre en `carga_EPH/processed`. Los datos NO están en el repo: viven en el Drive del

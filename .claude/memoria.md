@@ -9,6 +9,10 @@
 **Estado: proyecto al día con T1-2026. 7 notebooks (00-06) validados en Colab con 37
 trimestres (T1-2017 → T1-2026).** Árbol git limpio, todo pusheado a `main`.
 
+⚠ **Pendiente inmediato:** el 06 se reorganizó (ver punto 4) y se testeó local con datos
+sintéticos + CSV real, pero **falta correrlo en Colab**. Esperado: mismos números que la v3
+(el índice no cambió), sección 12 con todo ✓, 3 archivos en `carga_EPH/resultados/`.
+
 Qué se hizo en la sesión 2026-09-29:
 1. **T1-2026 incorporado.** Zip con nombres internos regulares; el 00 (ahora
    `overwrite=False`, verificación con `available[-1]`) compiló solo T126 (43.739 × 331).
@@ -18,6 +22,14 @@ Qué se hizo en la sesión 2026-09-29:
 3. **Nuevo `06_termometro.ipynb`** (índice de malestar económico de los hogares), iterado
    v1 → v2 → v3 y validado. Ver sección "Termómetro" abajo. El notebook se **genera** con
    `tools/gen_06_termometro.py` (no editar el .ipynb a mano).
+4. **06 reorganizado (índice sin cambios, sigue v3):** 13 secciones + 2 anexos. Nuevas:
+   6 lectura automática del último trimestre (`resumen_trimestre(q)`: ranking y "desde
+   cuándo", aporte de cada dimensión a la variación i.a., récords, percentil ≥ 80, mayores
+   movimientos, complementarios ≥ 1 pp); 11 promedios anuales; 12 controles de calidad
+   (cobertura, muestra, chequeo de sentido ✓/⚠, códigos `PP11O`); 13 exporta además
+   `termometro_EPH_anual.csv` y `termometro_EPH_resumen.md`. El diagnóstico de candidatas
+   pasó al Anexo A con `CANDIDATAS = {}` por defecto (ya no corre pluriempleo); Anexo B =
+   historial de versiones. README y TECNICO §6 actualizados.
 
 **Pendientes / ideas (ninguno bloqueante):**
 1. **Próximo trimestre T2-2026**: subir zip a `carga_EPH`, correr 00 y luego 01-06. Revisar
@@ -27,7 +39,7 @@ Qué se hizo en la sesión 2026-09-29:
      trimestres): flujos empleo→desempleo, registrado→no registrado. Recomendada.
    - Termómetro **por región** (`REGION`) y **por grupos** (jóvenes, sexo, educación del jefe).
    - Calidad del empleo por **rama** (`PP04B_COD`) y tamaño (`PP04C99`).
-   - Página/artifact con resultados; resumen automático en texto del último trimestre.
+   - Página/artifact con resultados (el resumen automático en texto ya está: sección 6 del 06).
 3. Termómetro, ajustes posibles: sumar ex-cuentapropistas que cerraron por falta de
    clientes (`PP11L==1`) al indicador de despidos. Candidatas no evaluadas: jóvenes 18-24
    que no estudian ni trabajan (~19,8%), temporarios `PP07C==1` (~8,5%, sesgo composición),
@@ -65,7 +77,7 @@ Dimensiones 2026T1: A 34,7 · B 66,3 · C 78,9. Lectura: hay empleo pero más pr
 (asalariados sin descuento 37,9% = máximo de la serie; asalariados registrados 20,0% de la
 población, percentil 86) y los hogares usan reservas (préstamos familiares p90, gastaron
 ahorros p89, vendieron pertenencias p81): estrés en el nivel más alto fuera de la pandemia.
-Promedio anual (v3): 2017 29,9 · 2018 43,8 · 2019 65,9 · 2020 72,3 · 2021 64,4 · 2022 41,6
+Promedio anual (v3; sección 11 del 06): 2017 29,9 · 2018 43,8 · 2019 65,9 · 2020 72,3 · 2021 64,4 · 2022 41,6
 · 2023 26,2 · 2024 49,0 · 2025 54,3 · 2026 (solo T1) 60,0. 2026T1 es el 10.º trimestre más
 alto de 37 (todos los superiores son 2019T2-2021T2). Estados: 21 Tibio, 8 Templado, 8 Fiebre.
 Re-corrida del 06 el 2026-09-29 (CSV 37 × 40 con `trimestre`) idéntica a la validación.
@@ -78,7 +90,7 @@ Exporta `carga_EPH/resultados/termometro_EPH.csv` (37 × 39; `;`, decimal `,`, u
   Además desalentados y niños <10 (≈0,1%) metían ruido.
 - **v2**: desalentados y niños pasan a complementarios; B suma la tasa de asalariados
   registrados sobre población. 2020T2 → 64,7; máx 2020T4 83,1.
-- **v3**: sección 10 "Diagnóstico de candidatas" (6 criterios: cobertura desde 2017,
+- **v3**: sección 10 (hoy Anexo A) "Diagnóstico de candidatas" (6 criterios: cobertura desde 2017,
   códigos estables entre esquemas, pandemia > valle 2023, autocorrelación ≥0,3, Spearman
   con termómetro ≥0,3, |corr| <0,85 con indicadores del índice). `PP11O==1` pasó (autocorr
   0,76, Spearman 0,60, corr máx 0,83 con desocupación) → entra a A; luego ampliado al
@@ -173,3 +185,5 @@ empleo = ocupados/total; desocupación = desocupados/PEA; subocupación = `INTEN
   (`docs/TECNICO.md`, README con setup para nueva PC). Creado `06_termometro.ipynb`;
   v1 falló chequeo 2020 (efecto composición) → v2 corregida → v3 suma despidos
   (`PP11O∈{1,7}`), pluriempleo descartado; v3 validada. Generador versionado en `tools/`.
+  Re-corrida verificada (idéntica). 06 reorganizado: lectura automática, promedios
+  anuales, controles de calidad, exportación anual/resumen, candidatas a Anexo A.
