@@ -50,7 +50,7 @@ y unir las bases de nuevo.
 | `05_educacion.ipynb` | Nivel educativo, asistencia escolar, público/privado, analfabetismo | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/05_educacion.ipynb) |
 | `06_termometro.ipynb` | **Termómetro de la economía de los hogares**: índice compuesto 0-100 (cantidad y calidad del empleo + estrategias de supervivencia de los hogares), percentil histórico, evolución, mapa de calor y CSV en Drive | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/06_termometro.ipynb) |
 
-**Cobertura actual:** 37 trimestres, **T1-2017 → T1-2026** (00-05 validados en Colab; 06 pendiente de validar).
+**Cobertura actual:** 37 trimestres, **T1-2017 → T1-2026** (todos los notebooks validados en Colab).
 
 ### Qué hace el notebook 00 (compilación)
 
