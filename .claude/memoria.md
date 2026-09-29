@@ -1,5 +1,20 @@
 # Memoria del proyecto: analisis_EPH
 
+## ⭐ HANDOFF (última sesión: 2026-09-29) — T1-2026 agregado
+
+- El usuario subió `EPH_usu_1_Trim_2026_txt.zip` a Drive `carga_EPH` (37 trimestres: T1-2017 → T1-2026).
+- Validado localmente (copia en Downloads): nombres internos regulares (`usu_hogar_T126.txt`,
+  `usu_individual_T126.txt`) → el loader los detecta como (2026, 1). Individual 43.739 × 234,
+  hogar 15.447 × 98, merge 43.739 × 330 sin hogares sin match; ITF int64 / IPCF float64.
+  Esquema nuevo (EMPLEO, SECTOR, P_DECCF, V2_01_M, V5_01_M presentes). Todas las variables
+  que usan los notebooks 01-05 están. Tasas rápidas T1-2026: actividad 48,6%, empleo 44,8%,
+  desocupación 7,8%.
+- Notebook 00: `build_panel(..., overwrite=False)` (antes estaba en True → recompilaba los 36);
+  la verificación del merge usa `available[-1]` en vez de `(2025, 4)` fijo.
+- Títulos "serie 2017-2025" en 02-05 → "serie desde 2017".
+- **Pendiente:** correr el 00 en Colab (compila solo T126) y luego re-correr 01-05 para
+  validar que el último trimestre pasa a 2026T1.
+
 ## ⭐ HANDOFF (última sesión: 2026-06-12) — leer esto primero
 
 **Estado: notebook 00 (compilador) FUNCIONA end-to-end y validado en Colab.**
