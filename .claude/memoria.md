@@ -6,18 +6,33 @@
 
 ## ⭐ HANDOFF (última sesión: 2026-09-29)
 
-**NUEVO (fin de sesión 2026-09-29): `06_termometro.ipynb` creado, FALTA VALIDARLO EN COLAB.**
+**`06_termometro.ipynb` — v2 (2026-09-29), FALTA RE-CORRERLO EN COLAB.**
+La v1 corrió en Colab (37 trimestres) pero falló el chequeo de sentido: 2020T2 daba 48
+(Tibio) porque la dimensión B daba 0,9 (¡"mejor" de la serie!) por **efecto composición**
+(en cuarentena se perdieron empleos informales y de pocas horas → informalidad, subocupación
+y ocupados demandantes, calculados sobre ocupados, "mejoraron"), y A bajaba por desalentados
+(0,1%, mínimo) y desocup. >1 año. v1 real: 2026T1 = 59,7; máx 2020T4 78,0; mín 2017T4 23,6.
+Cambios v2: (1) desalentados y niños <10 pasan a complementarios (niveles 0,0-0,4% = ruido);
+(2) B suma "Tasa de empleo asalariado registrado" (`CAT_OCUP==3 & PP07H==1` / población,
+invertida). Simulado con la tabla real (registrado aproximado): 2020T2 → ~65, 2020T3 → ~71,
+máx 2020T4 ~83, mín 2023T3-T4 ~23, 2026T1 ~58. **Validar en Colab que se confirme.**
+Hallazgo v1 que se mantiene: estrés de los hogares (C) en 2025T4-2026T1 ≈ 80-84, el nivel
+más alto fuera de la pandemia; asalariados sin descuento 37,9% en 2026T1 = máximo de la serie.
+
+Descripción v2 (índice actual):
 Índice compuesto de "malestar" 0-100 (0 = mejor trimestre de la serie, 100 = peor), etapa 1
 sin variables monetarias. 3 dimensiones con peso 1/3 cada una:
 - A. Cantidad de empleo: desocupación, tasa de empleo (invertida), desocupación >1 año
-  (`PP10A==5`, % PEA), desalentados (`ESTADO==3 & PP02E==3`, % PEA).
+  (`PP10A==5`, % PEA).
 - B. Calidad: subocupación (`INTENSI==1`), ocupados que buscan otro empleo (`PP03J==1`, % PEA),
-  asalariados sin descuento jubilatorio (`CAT_OCUP==3 & PP07H==2`).
+  asalariados sin descuento jubilatorio (`CAT_OCUP==3 & PP07H==2`, % asalariados), tasa de
+  empleo asalariado registrado (`CAT_OCUP==3 & PP07H==1`, % población, invertida).
 - C. Estrés de hogares (jefe `CH03==1`, % hogares): `V13` ahorros, `V14` préstamos
   familiares, `V17` vendieron pertenencias, `V6` alimentos gobierno/instituciones, `V7`
-  alimentos familiares, `V19_A|V19_B` niños <10 aportan dinero.
+  alimentos familiares.
 - Complementarios fuera del índice: `EMPLEO==2` (solo ≥2023T4), `V15` préstamos bancarios,
-  `V16` cuotas/fiado (señal ambigua: crédito ≠ estrés).
+  `V16` cuotas/fiado (señal ambigua: crédito ≠ estrés), desalentados (`ESTADO==3 & PP02E==3`)
+  y niños <10 que aportan (`V19_A|V19_B`) (niveles ~0,1% = ruido).
 - Normalización: percentil histórico orientado de cada indicador, **redondeado a 1 decimal
   antes de rankear** (evita que el ruido en indicadores ~0,1% los lleve a 0/100).
   Franjas: ≤33 Templado, ≤66 Tibio, >66 Fiebre. También media móvil 4T y var. interanual.

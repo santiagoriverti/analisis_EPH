@@ -98,6 +98,10 @@ Variables del esquema nuevo (primer dato en 2023T4): `EMPLEO`, `SECTOR`, `P_DECC
   Para agregar/quitar un indicador del índice basta con editar ese dict (y su cálculo).
 - `percentil_orientado(s, signo)`: rank promedio sobre `signo * s.round(1)` → 0-100.
 - Termómetro = media de las dimensiones; cada dimensión = media de sus percentiles.
+- **Efecto composición:** en shocks que destruyen empleo precario (2020T2), los indicadores
+  calculados sobre ocupados mejoran artificialmente. Por eso la dimensión B incluye una tasa
+  sobre población (asalariados registrados). Chequeo de sentido del índice: 2020T2-2021T1
+  debe quedar alto y 2023T3-T4 bajo.
 - Los percentiles son relativos a la historia disponible: **al sumar trimestres, los valores
   históricos del índice pueden moverse levemente** (es esperable, no un bug).
 
