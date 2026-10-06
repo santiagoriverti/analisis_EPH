@@ -8,6 +8,10 @@ venv/
 data/raw/*.zip
 data/raw/*.txt.bak
 
+# Parquets y salidas locales (tools/probar_06_local.py)
+data/processed/*
+!data/processed/.gitkeep
+
 # Claude helper scripts (no versionar)
 .claude/*.py
 .claude/*.sh

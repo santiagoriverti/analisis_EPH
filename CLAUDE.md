@@ -12,12 +12,13 @@ Proyecto de notebooks (Google Colab) de análisis de la EPH del INDEC.
    (hogar y personas), claves de vínculo, ponderadores y quiebre de esquema 4T2023.
    Consultar antes de tocar cualquier notebook de análisis.
 
-## Estado (2026-09-29)
+## Estado (2026-10-06)
 
-7 notebooks validados en Colab (00 compilador + 01 demografía, 02 laboral, 03 ingresos,
-04 vivienda, 05 educación, 06 termómetro 0-100, índice v3 con lectura automática, promedios
-anuales y controles de calidad) con **37 trimestres
-T1-2017 → T1-2026**. Pendientes e ideas en el HANDOFF de la memoria.
+7 notebooks (00 compilador + 01 demografía, 02 laboral, 03 ingresos, 04 vivienda,
+05 educación, 06 termómetro 0-100) con **37 trimestres T1-2017 → T1-2026**, validados en
+Colab. El 06 pasó a la **v4** (4 dimensiones con ingresos reales deflactados por IPC,
+intervalos de confianza bootstrap): probada en la PC con datos reales, falta validarla en
+Colab. Pendientes e ideas en el HANDOFF de la memoria.
 Datos: `.zip` del INDEC en Google Drive (`carga_EPH`), compilados a parquets por
 trimestre en `carga_EPH/processed`. Los datos NO están en el repo: viven en el Drive del
 usuario; el código corre en Colab, así que cambiar de PC solo requiere clonar el repo.
@@ -33,6 +34,8 @@ usuario; el código corre en Colab, así que cambiar de PC solo requiere clonar 
 - Editar notebooks vía JSON (`json.load`/`json.dump`), no con `sed` sobre el `.ipynb`.
 - **El notebook 06 se genera** con `tools/gen_06_termometro.py`: editar el script y
   regenerar (`python tools/gen_06_termometro.py`), nunca el `.ipynb` directo.
-- No hay datos EPH en el repo ni en la PC (salvo copias sueltas): los resultados reales
-  salen de correr en Colab; el usuario pega las salidas en el chat.
+- No hay datos EPH en el repo. En la PC se pueden tener los datos reales:
+  `python tools/probar_06_local.py --descargar` baja los zips del INDEC a `data/raw/`, compila
+  a `data/processed/` (ambos ignorados) y corre el 06. Para los demás notebooks, Colab sigue
+  siendo la referencia (el usuario pega las salidas en el chat).
 - En Windows, evitar heredocs largos con backticks en bash: escribir scripts a archivo.

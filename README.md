@@ -50,7 +50,7 @@ y unir las bases de nuevo.
 | `03_ingresos_pobreza.ipynb` | Distribución del ingreso (IPCF), deciles, Gini, brechas D10/D1 | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/03_ingresos_pobreza.ipynb) |
 | `04_vivienda.ipynb` | Tipo de vivienda, tenencia, servicios (agua/cloaca), hacinamiento, déficit | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/04_vivienda.ipynb) |
 | `05_educacion.ipynb` | Nivel educativo, asistencia escolar, público/privado, analfabetismo | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/05_educacion.ipynb) |
-| `06_termometro.ipynb` | **Termómetro de la economía de los hogares**: índice de malestar 0-100 (cantidad de empleo y despidos, calidad del empleo, estrategias de supervivencia de los hogares): lectura automática del último trimestre, evolución, mapa de calor, promedios anuales, controles de calidad y exportación a Drive | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/06_termometro.ipynb) |
+| `06_termometro.ipynb` | **Termómetro de la economía de los hogares**: índice de malestar 0-100 (cantidad de empleo y despidos, calidad del empleo, estrategias de supervivencia de los hogares, ingresos reales) con intervalos de confianza: lectura automática del último trimestre, evolución, mapa de calor, promedios anuales, controles de calidad y exportación a Drive | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/06_termometro.ipynb) |
 
 **Cobertura actual:** 37 trimestres, **T1-2017 → T1-2026** (todos los notebooks validados en Colab).
 
@@ -90,52 +90,62 @@ df = load_panel(columns=["CH06", "CH04", "REGION", "PONDERA"])  # ej. demografí
 ## Termómetro de la economía de los hogares (notebook 06)
 
 Índice trimestral de **malestar** de 0 (mejor trimestre de la serie) a 100 (peor), con
-tres dimensiones de igual peso. No usa ingresos ni pobreza (no depende de deflactores).
+cuatro dimensiones de igual peso (v4, 2026-10).
 
 | Dimensión | Indicadores |
 |---|---|
 | Cantidad de empleo | desocupación, tasa de empleo, desocupación de más de 1 año, desocupados por despido o renuncia forzada |
-| Calidad del empleo | subocupación, ocupados que buscan otro empleo, asalariados sin descuento jubilatorio, tasa de asalariados registrados |
+| Calidad del empleo | subocupación, ocupados que buscan otro empleo, personas sin cobertura de salud, tasa de asalariados registrados |
 | Estrés de los hogares | gastaron ahorros, préstamos de familiares, vendieron pertenencias, recibieron alimentos (gobierno/instituciones o familiares) |
+| Ingresos reales | ingreso real de la ocupación principal, personas con ingreso per cápita familiar real bajo |
 
 **Cómo se calcula:** cada indicador se ubica en su percentil histórico (2017 en adelante,
 orientado para que 100 = peor); cada dimensión promedia sus indicadores y el termómetro
-promedia las tres dimensiones. Franjas: **Templado** (≤ 33), **Tibio** (≤ 66),
+promedia las cuatro dimensiones. Franjas: **Templado** (≤ 33), **Tibio** (≤ 66),
 **Fiebre** (> 66). Es una medida *relativa a la historia*: 60 = peor que el 60% de los
-trimestres observados.
+trimestres observados. Los ingresos se deflactan con el IPC nacional del INDEC (se baja de
+la API de datos.gob.ar; respaldo en `data/ipc_nacional.csv`), usando el mes anterior a la
+entrevista, y se desestacionalizan por el aguinaldo.
 
-**Qué muestra el notebook:** termómetro del último trimestre y sus dimensiones frente al
-año anterior; una **lectura automática en texto** (posición en la serie, qué dimensión
-explica la variación interanual, indicadores en récord y mayores movimientos); evolución
-trimestral y por dimensión; mapa de calor de indicadores; tabla del último trimestre;
-promedios anuales; **controles de calidad** automáticos (cobertura, tamaño de muestra,
-chequeo de sentido, códigos de `PP11O`); y, en anexos, la herramienta para evaluar
-indicadores candidatos y el historial de versiones.
+**Incertidumbre:** la EPH es una muestra, así que el notebook calcula **intervalos de
+confianza del 95%** con 200 réplicas bootstrap (remuestreo de viviendas) para el nivel, la
+variación interanual y la media móvil. Una variación interanual tiene que superar ~10 puntos
+para distinguirse del ruido; la media móvil de 4 trimestres tiene la mitad de ruido.
+
+**Qué muestra el notebook:** termómetro del último trimestre (con su intervalo) y sus
+dimensiones frente al año anterior; una **lectura automática en texto** (posición en la serie,
+variación interanual y si es significativa, qué dimensión la explica, indicadores en récord y
+mayores movimientos); evolución trimestral con banda de confianza y por dimensión; mapa de
+calor de indicadores; tabla del último trimestre; promedios anuales; **controles de calidad**
+automáticos (cobertura, tamaño de muestra, chequeo de sentido, códigos de `PP11O` y `CH08`); y,
+en anexos, la herramienta para evaluar indicadores candidatos y el historial de versiones.
 
 **Salidas** (en Drive, `carga_EPH/resultados/`, CSV con `;` y decimal `,`):
-`termometro_EPH.csv` (serie trimestral completa), `termometro_EPH_anual.csv` y
-`termometro_EPH_resumen.md` (la lectura del último trimestre).
+`termometro_EPH.csv` (serie trimestral completa con intervalos de confianza),
+`termometro_EPH_anual.csv` y `termometro_EPH_resumen.md` (la lectura del último trimestre).
 
-**Resultados (v3, T1-2017 → T1-2026):**
+**Resultados (v4, T1-2017 → T1-2026):**
 
 | Año | 2017 | 2018 | 2019 | 2020 | 2021 | 2022 | 2023 | 2024 | 2025 | 2026 (T1) |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Termómetro | 29,9 | 43,8 | 65,9 | 72,3 | 64,4 | 41,6 | 26,2 | 49,0 | 54,3 | 60,0 |
+| Termómetro | 24,1 | 35,0 | 58,2 | 76,6 | 66,4 | 47,2 | 35,0 | 58,3 | 48,4 | 52,8 |
 
-- Máximo en 2020T4 (82,1); mínimos en 2017T4 (20,4) y 2023T3 (22,4).
-- **2026T1 = 60,0 (Tibio), +11,0 puntos interanual**, el valor más alto desde 2021T2 (10.º
-  de 37). La suba la explican el estrés de los hogares (+7,4) y la calidad del empleo
-  (+6,7); la cantidad de empleo resta (−3,1). Hay empleo, pero más precario (asalariados
-  sin descuento jubilatorio 37,9% = máximo de la serie) y los hogares usan reservas
-  (préstamos de familiares p90, gastaron ahorros p89, vendieron pertenencias p81).
+- Máximo en 2020T4 (89,7); mínimo en 2017T4 (13,4). El shock de ingresos de 2024 se ve:
+  2024T1 = 56,6 y 2024T2 = 64,4 (dimensión de ingresos en 100 y 97).
+- **2026T1 = 52,8 (Tibio; IC 95% 44,4 a 60,6), +5,4 puntos interanual, que no se distingue
+  del ruido muestral** (IC −4,4 a +15,1). La media móvil 4T (49,8) bajó 6,3 puntos en un año
+  (significativo). Los ingresos reales se recuperaron (dimensión D en 31,9), pero el empleo es
+  más precario (sin cobertura de salud 34,1%, p97; asalariados registrados p86) y los hogares
+  usan reservas (préstamos de familiares p90, gastaron ahorros p89, vendieron pertenencias p81).
 
 **Actualización trimestral:** después de correr el 00 con el trimestre nuevo, correr el 06
-completo y revisar la sección 12 (todos ✓). El anexo A no hace falta (no hace nada salvo
+completo y revisar la sección 13 (todos ✓). El anexo A no hace falta (no hace nada salvo
 que se carguen candidatas).
 
 El notebook se genera con `python tools/gen_06_termometro.py` (no editar el `.ipynb` a
-mano). Detalle metodológico en [`docs/TECNICO.md`](docs/TECNICO.md) §6 y diccionario de
-variables en [`.claude/memoria_EPH.md`](.claude/memoria_EPH.md) §9.
+mano) y se puede probar en la PC con datos reales con `python tools/probar_06_local.py
+--descargar`. Detalle metodológico en [`docs/TECNICO.md`](docs/TECNICO.md) §6 y diccionario
+de variables en [`.claude/memoria_EPH.md`](.claude/memoria_EPH.md) §9.
 
 ## Continuar en otra PC
 
@@ -161,6 +171,8 @@ pip install -r requirements.txt
 ```
 
 Para correr localmente, poner los `.zip` del INDEC en `data/raw/` (no se versionan).
+`python tools/probar_06_local.py --descargar` los baja del sitio del INDEC, compila los
+parquets en `data/processed/` (ignorado por git) y corre el notebook 06 completo.
 
 ## Documentación técnica
 

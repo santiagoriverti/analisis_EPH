@@ -4,107 +4,110 @@
 > bloque **HANDOFF**. Detalle técnico en [`docs/TECNICO.md`](../docs/TECNICO.md);
 > diccionario de variables en [`memoria_EPH.md`](memoria_EPH.md).
 
-## ⭐ HANDOFF (última sesión: 2026-09-29)
+## ⭐ HANDOFF (última sesión: 2026-10-06)
 
-**Estado: proyecto al día con T1-2026. 7 notebooks (00-06) validados en Colab con 37
-trimestres (T1-2017 → T1-2026).** Árbol git limpio, todo pusheado a `main`.
+**Estado: termómetro v4 implementado y probado en la PC con datos reales; falta validarlo en
+Colab.** Datos al día con T1-2026 (37 trimestres, T1-2017 → T1-2026). T2-2026 todavía no
+estaba publicado el 2026-10-06 (la URL del INDEC devuelve una página HTML).
 
-El 06 reorganizado (punto 4) está **validado en Colab** (2026-09-29): números idénticos a
-la v3, sección 12 con los 5 chequeos ✓ (hogares T126 15.447 vs mediana 16.815; pandemia
-73,8; valle 23,4), 3 archivos exportados.
+Qué se hizo en la sesión 2026-10-06:
+1. **Datos reales en la PC.** Los 37 zips se bajaron del sitio del INDEC a `data/raw/`
+   (ignorado; URL `https://www.indec.gob.ar/ftp/cuadros/menusuperior/eph/EPH_usu_<Q>_Trim_<AAAA>_txt.zip`,
+   T1-2017 se llama `EPH_usu_1er_Trim_2017_txt.zip`). Nuevo `tools/probar_06_local.py
+   [--descargar]`: baja lo que falte, compila a `data/processed/` (ignorado) y corre el 06
+   completo en ~30 s. Réplica exacta del v3 verificada (82,1 / 20,4 / 60,0). **Ya no hace falta
+   el remuestreo sintético para testear.**
+2. **Evaluación del termómetro** (bootstrap de 300 réplicas por vivienda, 15 candidatas, 10
+   variantes de metodología, validación contra pobreza oficial, EMAE i.a. y confianza del
+   consumidor UTDT). Conclusiones: el índice es robusto (variantes de metodología con corr.
+   0,93-0,98; ninguna candidata nueva lo movía > 5 pts); el ruido muestral era grande (i.a.
+   de +11 en 2026T1 con IC −0,2 a +22,6; variación mínima detectable ~10 pts); "asalariados
+   sin descuento" fallaba 2 criterios del Anexo A (cae en la pandemia, Spearman −0,23); punto
+   ciego = ingresos (corr. con la pobreza 0,29).
+3. **v4 (pedido del usuario: cambios 1, 2 y 4 de la evaluación):** (1) intervalos de confianza
+   bootstrap en el notebook (nivel, i.a., media móvil; lectura dice si la variación es
+   significativa; banda en el gráfico; columnas en el CSV); (2) `CH08==4` sin cobertura de
+   salud reemplaza a asalariados sin descuento en B (sale a complementario); (3) nueva
+   dimensión **D. Ingresos reales** (ingreso laboral real + personas con ingreso per cápita
+   real bajo), IPC nacional por API con respaldo `data/ipc_nacional.csv`. El usuario antes
+   había descartado ingresos; lo reconsideró con la evidencia. Sección 3 reescrita: un
+   diccionario `INDICADORES` define cada indicador una vez (numerador/denominador) y sirve
+   para el valor puntual y las réplicas. Los 19 indicadores comunes dan idéntico al v3.
 
-Qué se hizo en la sesión 2026-09-29:
-1. **T1-2026 incorporado.** Zip con nombres internos regulares; el 00 (ahora
-   `overwrite=False`, verificación con `available[-1]`) compiló solo T126 (43.739 × 331).
-   01-05 re-corridos OK. Fix cosmético en 01 (`FuncFormatter` en la pirámide).
-2. **Documentación reorganizada** para continuar en otra PC: `docs/TECNICO.md`, README con
-   sección "Continuar en otra PC", `CLAUDE.md` con orden de lectura.
-3. **Nuevo `06_termometro.ipynb`** (índice de malestar económico de los hogares), iterado
-   v1 → v2 → v3 y validado. Ver sección "Termómetro" abajo. El notebook se **genera** con
-   `tools/gen_06_termometro.py` (no editar el .ipynb a mano).
-4. **06 reorganizado (índice sin cambios, sigue v3):** 13 secciones + 2 anexos. Nuevas:
-   6 lectura automática del último trimestre (`resumen_trimestre(q)`: ranking y "desde
-   cuándo", aporte de cada dimensión a la variación i.a., récords, percentil ≥ 80, mayores
-   movimientos, complementarios ≥ 1 pp); 11 promedios anuales; 12 controles de calidad
-   (cobertura, muestra, chequeo de sentido ✓/⚠, códigos `PP11O`); 13 exporta además
-   `termometro_EPH_anual.csv` y `termometro_EPH_resumen.md`. El diagnóstico de candidatas
-   pasó al Anexo A con `CANDIDATAS = {}` por defecto (ya no corre pluriempleo); Anexo B =
-   historial de versiones. README y TECNICO §6 actualizados.
+**Pendientes / ideas:**
+1. **Validar v4 en Colab** (después del push): correr el 06 y comparar con la referencia v4
+   (2026T1 = 52,8, IC 44,4-60,6; controles de la sección 13 todos ✓; "IPC: API datos.gob.ar").
+2. **T2-2026** cuando lo publique el INDEC: subir zip a `carga_EPH`, correr 00 y 01-06 (o
+   probar antes en la PC con `tools/probar_06_local.py --descargar`). El IPC ya cubre mar-may 2026.
+3. Extensiones propuestas antes (ninguna empezada): transiciones con el panel rotativo
+   (recomendada; el bootstrap por `CODUSU` ya respeta el panel), termómetro por región o
+   grupos, calidad del empleo por rama/tamaño, página/artifact de resultados.
+4. Deciles "escalonados" en 03 (empates de IPCF en valores redondos; fix: decil por ranking
+   acumulado de `PONDIH`). Sin confirmar por el usuario.
+5. Menores: columna faltante en T126 (234 vs 235), T3-2021 con 266 cols, contrastar
+   desocupación T1-2026 (7,8%) con el informe INDEC. La skill global `indec-api` tiene un ID de
+   IPC que ya no existe (`148.3_INIVELGENE_DICI_M_26`; el correcto es `148.3_INIVELNAL_DICI_M_26`).
 
-**Pendientes / ideas (ninguno bloqueante):**
-1. **Próximo trimestre T2-2026**: subir zip a `carga_EPH`, correr 00 y luego 01-06. Revisar
-   que el termómetro no cambie de forma (los percentiles se recalculan con la historia).
-2. Extensiones propuestas al usuario (eligió NO sumar ingresos reales ni pobreza):
-   - **Transiciones con el panel rotativo** (`CODUSU`+`NRO_HOGAR`+`COMPONENTE` entre
-     trimestres): flujos empleo→desempleo, registrado→no registrado. Recomendada.
-   - Termómetro **por región** (`REGION`) y **por grupos** (jóvenes, sexo, educación del jefe).
-   - Calidad del empleo por **rama** (`PP04B_COD`) y tamaño (`PP04C99`).
-   - Página/artifact con resultados (el resumen automático en texto ya está: sección 6 del 06).
-3. Termómetro, ajustes posibles: sumar ex-cuentapropistas que cerraron por falta de
-   clientes (`PP11L==1`) al indicador de despidos. Candidatas no evaluadas: jóvenes 18-24
-   que no estudian ni trabajan (~19,8%), temporarios `PP07C==1` (~8,5%, sesgo composición),
-   desocupación de jefes (redundante con desocupación).
-4. **Deciles "escalonados" en 03** (D5 5,5% → D6 8,5% en T126) por empates de IPCF en
-   valores redondos. Fix: decil por ranking acumulado de `PONDIH` en `deciles_share`. Sin
-   confirmar por el usuario.
-5. T126 individual trae 234 cols (vs 235 en T4-2023…T4-2025): columna faltante sin
-   identificar (comparar `pq.read_schema` de `eph_T425` vs `eph_T126` en Colab). No afecta.
-6. Menores: T3-2021 con 266 cols (vs 264); contrastar desocupación T1-2026 (7,8%) con el
-   informe oficial INDEC.
+## Termómetro de la economía de los hogares (notebook 06) — v4 vigente
 
-## Termómetro de la economía de los hogares (notebook 06) — v3 vigente
-
-**Qué es:** índice de malestar 0-100 (0 = mejor trimestre de la serie, 100 = peor), sin
-variables monetarias. Franjas: ≤33 Templado, ≤66 Tibio, >66 Fiebre. Tres dimensiones con
-peso 1/3; cada indicador se normaliza como **percentil histórico orientado**, redondeando a
-1 decimal antes de rankear (evita que el ruido en indicadores chicos los lleve a 0/100).
+**Qué es:** índice de malestar 0-100 (0 = mejor trimestre de la serie, 100 = peor). Franjas:
+≤33 Templado, ≤66 Tibio, >66 Fiebre. Cuatro dimensiones con peso 1/4; cada indicador se
+normaliza como **percentil histórico orientado**, redondeando a 1 decimal antes de rankear.
+Intervalos de confianza del 95% por bootstrap (200 réplicas, Poisson por vivienda `CODUSU`,
+mismo multiplicador en todos los trimestres).
 
 | Dimensión | Indicadores (en el índice) |
 |---|---|
 | A. Cantidad de empleo | desocupación; tasa de empleo (invertida); desocupación >1 año (`PP10A==5`, % PEA); desocupados por despido o renuncia forzada (`PP11O∈{1,7}`, % PEA) |
-| B. Calidad del empleo | subocupación (`INTENSI==1`); ocupados que buscan otro empleo (`PP03J==1`, % PEA); asalariados sin descuento jubilatorio (`CAT_OCUP==3 & PP07H==2`); tasa de empleo asalariado registrado (`CAT_OCUP==3 & PP07H==1`, % población, invertida) |
+| B. Calidad del empleo | subocupación (`INTENSI==1`); ocupados que buscan otro empleo (`PP03J==1`, % PEA); **sin cobertura de salud** (`CH08==4`, % población); tasa de empleo asalariado registrado (`CAT_OCUP==3 & PP07H==1`, % población, invertida) |
 | C. Estrés de los hogares (jefe `CH03==1`, % hogares) | `V13` gastaron ahorros; `V14` préstamos familiares; `V17` vendieron pertenencias; `V6` alimentos de gobierno/instituciones; `V7` alimentos de familiares |
+| D. Ingresos reales | ingreso laboral real (media geométrica de `P21`/IPC, ocupados con `P21>0`, `PONDIIO`, invertido); personas con ingreso per cápita real bajo (`IPCF`/IPC < $3.123 de dic-2016 = 60% de la mediana 2017-2019, `PONDIH`). Ambos desestacionalizados (aguinaldo en T1 y T3) |
 
-Complementarios (se muestran, fuera del índice): informalidad `EMPLEO==2` (solo ≥2023T4),
-`V15` préstamos bancarios y `V16` cuotas/fiado (señal ambigua), desalentados
-(`ESTADO==3 & PP02E==3`) y niños <10 que aportan (`V19_A|V19_B`) (niveles ~0,1% = ruido),
-pluriempleo `PP03C==2` (descartado: procíclico).
+Deflactor: IPC nacional `148.3_INIVELNAL_DICI_M_26` (dic-2016 = 100), promedio de los meses de
+referencia = mes anterior a la entrevista (T1 → dic, ene, feb).
 
-**Resultados v3 (validados en Colab):** máx 2020T4 82,1; mín 2017T4 20,4; valle 2023T3
-22,4; 2020T2 65,7 (Tibio, a 0,3 del umbral, aceptado); 2024T1 44,2.
-**2026T1 = 60,0 (Tibio), +11,0 i.a.; media móvil 4T 57,0** (la más alta desde 2022).
-Dimensiones 2026T1: A 34,7 · B 66,3 · C 78,9. Lectura: hay empleo pero más precario
-(asalariados sin descuento 37,9% = máximo de la serie; asalariados registrados 20,0% de la
-población, percentil 86) y los hogares usan reservas (préstamos familiares p90, gastaron
-ahorros p89, vendieron pertenencias p81): estrés en el nivel más alto fuera de la pandemia.
-Promedio anual (v3; sección 11 del 06): 2017 29,9 · 2018 43,8 · 2019 65,9 · 2020 72,3 · 2021 64,4 · 2022 41,6
-· 2023 26,2 · 2024 49,0 · 2025 54,3 · 2026 (solo T1) 60,0. 2026T1 es el 10.º trimestre más
-alto de 37 (todos los superiores son 2019T2-2021T2). Estados: 21 Tibio, 8 Templado, 8 Fiebre.
-Re-corrida del 06 el 2026-09-29 (CSV 37 × 40 con `trimestre`) idéntica a la validación.
-Exporta `carga_EPH/resultados/termometro_EPH.csv` (37 × 39; `;`, decimal `,`, utf-8-sig).
+Complementarios (fuera del índice): asalariados sin descuento jubilatorio (salió en v4),
+ingreso per cápita familiar real (redundante, corr. 0,98 con ingreso bajo), informalidad
+`EMPLEO==2` (solo ≥2023T4), `V15` y `V16` (señal ambigua), desalentados y niños <10 (ruido),
+pluriempleo (procíclico).
+
+**Resultados v4 (probados en la PC con datos reales, falta Colab):** máx 2020T4 89,7; mín
+2017T4 13,4; valle 2023T3-T4 31,0 / 32,3 (percentil 18); 2020T2 70,1; 2024T1 56,6; 2024T2 64,4.
+**2026T1 = 52,8 (Tibio; IC 95% 44,4-60,6), +5,4 i.a. (IC −4,4 a +15,1: no significativa, sube
+en el 83% de las réplicas); media móvil 4T 49,8, −6,3 i.a. (IC −11,3 a −0,6: significativa).**
+Dimensiones 2026T1: A 34,7 · B 65,6 · C 78,9 · D 31,9. Lectura: ingresos reales recuperados
+respecto de 2024, empleo más precario (sin cobertura 34,1%, p97; asalariados registrados p86)
+y hogares usando reservas (préstamos familiares p90, ahorros p89, vendieron pertenencias p81).
+Promedio anual v4: 2017 24,1 · 2018 35,0 · 2019 58,2 · 2020 76,6 · 2021 66,4 · 2022 47,2 ·
+2023 35,0 · 2024 58,3 · 2025 48,4 · 2026 (solo T1) 52,8. Estados: 24 Tibio, 8 Templado, 5 Fiebre.
+Ruido: error estándar medio del nivel 3,6 pts y de la i.a. 4,9 pts (variación mínima
+detectable ~10 pts). Validación: corr. con la pobreza oficial 0,60 (v3: 0,29); corr. i.a. con
+EMAE i.a. −0,53 (v3: −0,32); señal/ruido 22 (v3: 18).
 
 **Historia de versiones (por qué está armado así):**
-- **v1**: falló el chequeo de sentido (2020T2 = 48). Causa: **efecto composición**: en la
-  cuarentena se perdieron sobre todo empleos informales y de pocas horas, entonces los
-  indicadores calculados sobre ocupados "mejoraron" (dimensión B = 0,9 en 2020T2).
-  Además desalentados y niños <10 (≈0,1%) metían ruido.
-- **v2**: desalentados y niños pasan a complementarios; B suma la tasa de asalariados
-  registrados sobre población. 2020T2 → 64,7; máx 2020T4 83,1.
-- **v3**: sección 10 (hoy Anexo A) "Diagnóstico de candidatas" (6 criterios: cobertura desde 2017,
-  códigos estables entre esquemas, pandemia > valle 2023, autocorrelación ≥0,3, Spearman
-  con termómetro ≥0,3, |corr| <0,85 con indicadores del índice). `PP11O==1` pasó (autocorr
-  0,76, Spearman 0,60, corr máx 0,83 con desocupación) → entra a A; luego ampliado al
-  código 7 "renuncia obligada/pactada" (despido encubierto) a pedido del usuario (con 1+7:
-  pandemia 1,62% vs valle 0,65%, autocorr 0,74, corr 0,82). `PP03C==2` (pluriempleo) no
-  pasó: procíclico (pandemia 7,8% vs valle 11,2%) y estacional (T1 8,4% vs 10,1%).
-- Notas `PP11O`: solo se pregunta a ex-asalariados; código 4 (fin de temporario) excluido
-  por estacional.
+- **v1**: falló el chequeo de sentido (2020T2 = 48) por **efecto composición** (en la
+  cuarentena se perdieron sobre todo empleos informales y de pocas horas: los indicadores
+  sobre ocupados "mejoraron"). Desalentados y niños <10 (≈0,1%) metían ruido.
+- **v2**: desalentados y niños a complementarios; B suma asalariados registrados sobre población.
+- **v3**: Anexo A "Diagnóstico de candidatas" (6 criterios: cobertura desde 2017, códigos
+  estables entre esquemas, pandemia > valle 2023, autocorrelación ≥0,3, Spearman con
+  termómetro ≥0,3, |corr| <0,85 con indicadores del índice). `PP11O∈{1,7}` entra a A;
+  pluriempleo descartado (procíclico).
+- **v4** (2026-10-06): IC bootstrap; `CH08==4` reemplaza a asalariados sin descuento (que fallaba
+  los criterios 3 y 5 por efecto composición: 35,8% → 23,8% en 2020T2); dimensión D de
+  ingresos reales. Chequeo de sentido nuevo: valle 2023 en el tercio inferior (antes ≤ 33, ya no
+  aplica porque los ingresos de 2023 eran bajos) y D > 66 en 2024T1-T2.
+- Descartado en la evaluación v4 (detalle en el Anexo A del 06 y `docs/TECNICO.md` §6): horas
+  trabajadas por persona, desocupación de jefes, hogares con activos sin ocupados, despidos +
+  cierres de cuentapropistas (`PP11L∈{1,2,4}`), hogares con 2+ estrategias, jóvenes que no
+  estudian ni trabajan, quieren más horas (`PP03G`) → redundantes (corr. 0,88-0,95); ocupados
+  ausentes (`INTENSI==4`, estacional), temporarios, `V15`, `V16`, `V3`/`V4` → ruido o signo
+  contrario; z-scores, min-max, desestacionalizar todo, pesos PCA/por indicador, C por personas
+  → cambios de segundo orden.
 
-**Cómo testear cambios sin Colab:** no hay datos locales salvo el xlsx de T4-2025
-(`Desktop/INECO/Emancipacion/EPH_usu_4_Trim_2025_xls.zip`, junto al PDF oficial
-`EPH_registro_4T2025.pdf`). Se arma un parquet con `merge_individual_hogar` y trimestres
-sintéticos por remuestreo de hogares para correr el código de punta a punta (ver
-`docs/TECNICO.md` §6). Los números reales solo salen en Colab.
+**Cómo testear cambios:** `python tools/gen_06_termometro.py && python tools/probar_06_local.py`
+(con `--descargar` la primera vez en una PC nueva). Corre con datos reales; los números
+coinciden con Colab.
 
 ## Flujo para agregar un trimestre (no requiere tocar código)
 
@@ -127,7 +130,11 @@ pedirá un parquet inexistente → siempre correr el 00 primero.
 | Actividad / empleo / desocupación (%) | 48,6 / 45,0 / 7,5 | 48,6 / 44,8 / 7,8 |
 | Subocupación (% PEA) | 11,3 | 11,1 |
 | Informalidad (% ocupados, desde 2023T4) | 43,0 | 44,2 (máx. serie) |
-| Termómetro v3 (0-100) / media móvil 4T | 57,1 / 54,3 | 60,0 / 57,0 |
+| Termómetro v4 (0-100) / media móvil 4T | 49,4 / 48,4 | 52,8 / 49,8 |
+| Termómetro v4: IC 95% del nivel | 41,8-56,7 | 44,4-60,6 |
+| Sin cobertura de salud (% población) | 33,8 | 34,1 |
+| Ingreso laboral real ($ dic-2016, media geom.) / ingreso bajo (% personas) | 7.823 / 28,2 | 7.486 / 27,1 |
+| (v3, referencia histórica) Termómetro / media móvil 4T | 57,1 / 54,3 | 60,0 / 57,0 |
 | Desocupados por despido o renuncia forzada (% PEA) | 1,1 | 1,1 |
 | Gini IPCF / D10/D1 / top10 % | 0,427 / 17,7 / 32,5 | 0,442 / 19,1 / 34,0 |
 | Sin cloaca / sin agua cañería / hacinamiento crítico (% hogares) | 27,3 / 1,9 / 1,8 | 27,0 / 1,9 / 1,8 |
@@ -160,7 +167,7 @@ Total panel previo a T126: 1.825.881 filas (36 trimestres).
 | 03 | IPCF: percentiles, participación por decil, D10/D1, Gini (Lorenz), top10/bottom40. Sin línea de pobreza (decisión del usuario) | Personas / `PONDIH` |
 | 04 | Tipo de vivienda (`IV1`), tenencia (`II7`), agua (`IV6`), desagüe (`IV11`), hacinamiento (`IX_TOT`/`II1`, crítico >3) | Hogar (jefe `CH03==1`) / `PONDERA` |
 | 05 | `NIVEL_ED` 25+, asistencia (`CH10`), público/privado (`CH11`), analfabetismo (`CH09`) | Personas / `PONDERA` |
-| 06 | Termómetro de la economía de los hogares 0-100, v3 (ver sección Termómetro). Generado por `tools/gen_06_termometro.py` | Personas + Hogar / `PONDERA` |
+| 06 | Termómetro de la economía de los hogares 0-100, v4 con IC (ver sección Termómetro). Generado por `tools/gen_06_termometro.py`; prueba local `tools/probar_06_local.py` | Personas + Hogar / `PONDERA`, `PONDIIO`, `PONDIH` + IPC |
 
 Definiciones INDEC usadas en 02: PEA = `ESTADO∈{1,2}`; actividad = PEA/total;
 empleo = ocupados/total; desocupación = desocupados/PEA; subocupación = `INTENSI==1`/PEA.
@@ -187,3 +194,7 @@ empleo = ocupados/total; desocupación = desocupados/PEA; subocupación = `INTEN
   (`PP11O∈{1,7}`), pluriempleo descartado; v3 validada. Generador versionado en `tools/`.
   Re-corrida verificada (idéntica). 06 reorganizado: lectura automática, promedios
   anuales, controles de calidad, exportación anual/resumen, candidatas a Anexo A; validado en Colab.
+- **2026-10-06**: datos reales en la PC (zips del INDEC + `tools/probar_06_local.py`).
+  Evaluación del termómetro (bootstrap, 15 candidatas, 10 variantes, validación externa) →
+  **v4**: IC bootstrap, sin cobertura de salud en B, dimensión D de ingresos reales (IPC
+  nacional, `data/ipc_nacional.csv`). Probado en la PC; falta validar en Colab.

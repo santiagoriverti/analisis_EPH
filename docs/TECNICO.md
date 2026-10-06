@@ -26,7 +26,8 @@ EPH_usu_<Q>_Trim_<YYYY>_txt.zip  ──►   carga_EPH/*.zip
   importar `src/data_loader.py`. **Los cambios de código solo llegan a Colab después
   de pushearlos a `main`.**
 - Alternativa local: poner `.zip`/`.txt` en `data/raw/` y usar `out_dir` por defecto
-  (`data/processed/`).
+  (`data/processed/`). `tools/probar_06_local.py --descargar` baja los zips del sitio del
+  INDEC, compila y corre el notebook 06 completo (ver §6, "Probar en la PC").
 
 ## 2. `src/data_loader.py`
 
@@ -85,77 +86,94 @@ Variables del esquema nuevo (primer dato en 2023T4): `EMPLEO`, `SECTOR`, `P_DECC
 - Informalidad y variables desagregadas: filtrar `(ANIO, TRIMESTRE) >= (2023, 4)`.
 - Ingresos: filtrar `IPCF >= 0` y no nulos (códigos de no respuesta `-9`).
 - Hogares: un registro por hogar tomando al jefe (`CH03 == 1`).
-- Métricas de ingreso usadas son unit-free (Gini, shares, ratios) → no requieren deflactar.
+- Métricas de ingreso del 03 son unit-free (Gini, shares, ratios) → no requieren deflactar.
+  El 06 sí deflacta (IPC nacional, mes anterior a la entrevista; ver §6).
+- No respuesta de ingresos: `P21 = -9` tiene `PONDIIO = 0`; las personas de hogares sin
+  respuesta (~25%) tienen `PONDIH = 0`. Los ponderadores de ingreso suman el total de la
+  población (ya corrigen la no respuesta): no hace falta imputar.
 - Deciles en 03: cuantiles ponderados (`weighted_quantile`); ver pendiente de empates.
 
-## 6. Notebook 06 — termómetro
+## 6. Notebook 06 — termómetro (v4)
 
 **Se genera, no se edita a mano:** `python tools/gen_06_termometro.py` reescribe
 `notebooks/06_termometro.ipynb` (cada `md()`/`code()` del script es una celda, en orden).
-Editar el script, regenerar, validar el JSON y pushear.
+Editar el script, regenerar, probar con `tools/probar_06_local.py` y pushear.
 
-Estructura del notebook (13 secciones + 2 anexos):
+Estructura del notebook (14 secciones + 2 anexos):
 
 | # | Sección | Contenido |
 |---|---|---|
-| 1 | Setup | clona/actualiza repo, monta Drive, copia parquets a `/content/processed_local`, define `RESULTADOS_DIR`; imports, paleta, `FRANJAS` |
-| 2 | Carga | `PERS_COLS` / `HOG_COLS` con `load_panel` + `pd.to_numeric`; hogares filtrados a `CH03==1` |
-| 3 | Indicadores | `ind_personas(g)` / `ind_hogares(g)` → DataFrame `ind` (% por trimestre) |
-| 4 | Normalización | `DIMENSIONES`, `COMPLEMENTARIOS`, `SIGNO`, `percentil_orientado`, `armar_termometro`, `termo` |
-| 5 | Termómetro hoy | termómetro vertical + dimensiones vs mismo trimestre del año anterior |
-| 6 | Lectura del último trimestre | `resumen_trimestre(q)` → texto Markdown (`resumen`): ranking y "desde cuándo", variación i.a. con aporte por dimensión (Δdim/3), media móvil, indicadores en récord o percentil ≥ 80, mayores movimientos i.a. (Δpercentil ≥ 20), complementarios que se movieron ≥ 1 pp |
-| 7-9 | Gráficos | evolución (con media móvil 4T y franjas), dimensiones, mapa de calor de percentiles |
-| 10 | Tabla | último trimestre vs año anterior, percentil y sentido de cada indicador |
-| 11 | Promedios anuales | `anual` (con `Trimestres` para marcar el año incompleto) + barras por franja |
-| 12 | Controles de calidad | cobertura de indicadores, tamaño de muestra del último trimestre, chequeo de sentido automático (✓/⚠), códigos de `PP11O` por esquema |
-| 13 | Exportar | `termometro_EPH.csv`, `termometro_EPH_anual.csv`, `termometro_EPH_resumen.md` en `carga_EPH/resultados/` |
-| A | Diagnóstico de candidatas | `CANDIDATAS` (vacío por defecto: no hace nada), 6 criterios, índice actual vs con candidatas; registro de evaluaciones |
-| B | Historial de versiones | v1 → v3 y reorganización del notebook |
+| 1 | Setup | clona/actualiza repo, monta Drive, copia parquets a `/content/processed_local`, define `RESULTADOS_DIR`; imports, paleta (4 dimensiones), `FRANJAS` |
+| 2 | Carga | `PERS_COLS` / `HOG_COLS` con `load_panel` + `pd.to_numeric` (salvo `CODUSU`); hogares filtrados a `CH03==1`. `cargar_ipc()`: IPC nacional por API (respaldo `data/ipc_nacional.csv`) → `IPC_Q` (promedio de los meses de referencia = mes anterior a la entrevista) → `P21_REAL`, `IPCF_REAL`; `SIN_IPC` lista los trimestres sin deflactor |
+| 3 | Indicadores + bootstrap | `INDICADORES` (nombre → base, ponderador, función → (numerador, denominador), tipo `pct`/`geo`); `UMBRAL_INGRESO`; un loop por trimestre arma sumas por vivienda (`CODUSU`) y calcula `ind` (puntual) e `ind_boot` (B × trimestres × indicadores) con multiplicadores Poisson `R` |
+| 4 | Normalización | `DIMENSIONES`, `COMPLEMENTARIOS`, `DESESTACIONALIZAR`, `SIGNO`, `desestacionalizar`, `serie_indice`, `percentil_orientado`, `armar_termometro(dimensiones, datos=None)`, `termo` |
+| 5 | Incertidumbre | arma el termómetro en cada réplica → `boot_t`, `boot_d`; `intervalo`, `resumen_incertidumbre` → `inc` (IC del nivel, variación i.a., P(sube), media móvil y su variación i.a.); `VAR_MIN` |
+| 6 | Termómetro hoy | termómetro vertical con IC + dimensiones (con IC) vs mismo trimestre del año anterior |
+| 7 | Lectura del último trimestre | `resumen_trimestre(q)` → Markdown (`resumen`): ranking y "desde cuándo" + IC, variación i.a. con IC/significancia/P(sube) y aporte por dimensión (Δdim/4), media móvil y su variación i.a., indicadores en récord o percentil ≥ 80, mayores movimientos i.a., complementarios que se movieron (≥ 1 pp o ≥ 5%); aviso si falta una dimensión |
+| 8-10 | Gráficos | evolución (banda IC 95%, media móvil 4T, franjas), dimensiones, mapa de calor de percentiles |
+| 11 | Tabla | último trimestre vs año anterior (pp para %, variación % para pesos), percentil y sentido |
+| 12 | Promedios anuales | `anual` (con `Trimestres` para marcar el año incompleto) + barras por franja |
+| 13 | Controles de calidad | cobertura, tamaño de muestra, chequeo de sentido (máximo 2019-2021, pandemia > 66, valle 2023 en el tercio inferior, D > 66 en 2024T1-T2), códigos de `PP11O` y `CH08` por esquema (`dist_codigos`) |
+| 14 | Exportar | `termometro_EPH.csv` (`pct_`/`pesos_`, `perc_`, termómetro, `Termómetro IC ...`), `termometro_EPH_anual.csv`, `termometro_EPH_resumen.md` en `carga_EPH/resultados/` |
+| A | Diagnóstico de candidatas | `CANDIDATAS` (vacío por defecto), 6 criterios + error estándar, índice actual vs con candidatas; registro de evaluaciones |
+| B | Historial de versiones | v1 → v4 y valores de referencia |
 
 Piezas clave:
-- `DIMENSIONES`: dict dimensión → {indicador: signo} (+1 = más alto es peor, -1 = invertido).
-  Para sumar/quitar un indicador del índice: calcularlo en la sección 3 y editar ese dict.
-  `SIGNO` se deriva de él (indicador → signo).
-- `percentil_orientado(s, signo)`: rank promedio sobre `signo * s.round(1)` → 0-100.
-- `armar_termometro(dimensiones)` → `(norm, dims, termómetro)`; termómetro = media de las
-  dimensiones, cada dimensión = media de los percentiles de sus indicadores.
-- `resumen_trimestre(q)` funciona para cualquier trimestre (útil para comparar episodios);
-  `posicion(serie, q)` decide si describirlo como "más alto" o "más bajo" según su ranking.
-- **Agregar una candidata** (Anexo A): calcularla en la sección 3, listarla en
-  `COMPLEMENTARIOS` y en `CANDIDATAS` como
-  `{"nombre": {"dimension": ..., "signo": ..., "variable": "PP03C", "universo": "ocupados"}}`,
-  correr en Colab y leer el anexo. Criterios: cobertura desde 2017; códigos estables entre
-  esquemas; peor en pandemia (2020T2-2021T1) que en el valle 2023T3-T4; autocorrelación
-  lag1 ≥ 0,3; Spearman con el termómetro ≥ 0,3; |corr| < 0,85 con cada indicador del índice.
-- **Efecto composición:** en shocks que destruyen empleo precario (2020T2), los indicadores
-  calculados sobre ocupados mejoran artificialmente. Por eso B incluye una tasa sobre
-  población (asalariados registrados). **Chequeo de sentido** (automatizado en la sección
-  12): máximo en 2019-2021, pandemia 2020T2-2021T1 > 66 en promedio, valle 2023T3-T4 ≤ 33.
+- **Un indicador se define una sola vez** en `INDICADORES`: `(base, ponderador, f, tipo)`, con
+  `f(g) -> (numerador, denominador)` por fila. `tipo="pct"`: Σw·num/Σw·den × 100;
+  `tipo="geo"`: media geométrica (el numerador es `log` del ingreso real, el denominador la
+  máscara del universo). El numerador puede estar fuera del denominador (desalentados / PEA).
+  Para sumar/quitar del índice: definirlo ahí y editar `DIMENSIONES`.
+- **Bootstrap:** multiplicadores Poisson(1) por vivienda (`R`, `B_BOOT = 200`, `SEMILLA` fija);
+  la misma vivienda recibe el mismo multiplicador en todos los trimestres (respeta el panel
+  rotativo, importante para las variaciones i.a.). Las réplicas reconstruyen el índice completo
+  (percentiles incluidos). IC = intervalo percentil centrado en el valor puntual. No conoce el
+  diseño muestral (áreas, estratos): los IC son aproximados, probablemente algo angostos.
+- **Ingresos (D):** deflactor `IPC_Q` = promedio del IPC nacional (`148.3_INIVELNAL_DICI_M_26`,
+  dic-2016 = 100) de los meses de referencia (el T1 usa dic, ene, feb). Ingreso laboral real =
+  media geométrica de `P21`/IPC de ocupados con `P21 > 0`, ponderada con `PONDIIO`. Ingreso
+  bajo = `IPCF`/IPC < `UMBRAL_INGRESO` (60% de la mediana ponderada del IPCF real 2017-2019 =
+  $3.123 de dic-2016 por persona), ponderado con `PONDIH`. Ambos se desestacionalizan
+  (`desestacionalizar`: media móvil centrada 2x4, factor = mediana del desvío por trimestre del
+  año sin 2020T1-2021T2) porque los meses de referencia del T1 y el T3 incluyen aguinaldo. Si
+  falta el IPC del último trimestre, D queda vacía ahí, la cobertura da ⚠ y la lectura avisa.
+- **IPC de respaldo:** `data/ipc_nacional.csv` (copia del CSV de la API). Actualizarlo de vez en
+  cuando:
+  `curl -s "https://apis.datos.gob.ar/series/api/series/?ids=148.3_INIVELNAL_DICI_M_26&format=csv&limit=5000" -o data/ipc_nacional.csv`.
+- `resumen_trimestre(q)` funciona para cualquier trimestre; `posicion(serie, q)` decide si
+  describirlo como "más alto" o "más bajo" según su ranking. `fv`/`fd` formatean según `UNIDAD`.
+- **Efecto composición:** en shocks que destruyen empleo precario y de bajos ingresos (2020T2),
+  los indicadores sobre ocupados mejoran artificialmente (subocupación, buscan otro empleo,
+  asalariados sin descuento, ingreso laboral). Cada dimensión afectada tiene al menos un
+  indicador sobre población (asalariados registrados y cobertura de salud en B; ingreso bajo en D).
 - Los percentiles son relativos a la historia disponible: al sumar trimestres, los valores
-  históricos del índice pueden moverse levemente (esperable, no un bug).
+  históricos del índice se mueven (en v3 el último trimestre se movió en promedio 3,8 pts,
+  máximo 12,7, al llegar los siguientes). Esperable, no un bug.
 - Códigos de variables verificados contra el PDF oficial `EPH_registro_4T2025.pdf`; ver
   `.claude/memoria_EPH.md` §9.
 
-**Testear sin Colab** (solo verifica que el código corre; los números reales salen en Colab):
-1. Armar un parquet de un trimestre real: leer los `.xlsx`/`.txt` del INDEC, unir con
-   `merge_individual_hogar`, agregar `ANIO`/`TRIMESTRE`, `_fix_mixed_type_columns`, guardar.
-2. Generar trimestres sintéticos remuestreando hogares (`CODUSU`+`NRO_HOGAR` con reemplazo),
-   con etiquetas que incluyan 2020T2-2021T1 y 2023T3-T4 (las secciones 12 y A las usan) y sin
-   `EMPLEO`/`SECTOR` en los previos a 2023T4.
-3. Extraer las celdas de código (salteando el setup de Colab), fijar `PROCESSED_DIR`,
-   `RESULTADOS_DIR`, backend `Agg`, reemplazar `list_available_quarters` por una lectura de
-   los parquets, reemplazar `display` por `print`, y ejecutar. En Windows usar
-   `PYTHONIOENCODING=utf-8` (la tabla usa ↑/↓ y los chequeos ✓/⚠). Con datos sintéticos
-   el chequeo de sentido da ⚠ (esperable: no tienen la historia real).
-4. La lectura automática (sección 6) se puede testear con datos reales sin correr el
-   notebook: leer el `termometro_EPH.csv` exportado, reconstruir `ind` (`pct_`), `norm`
-   (`perc_`), `dims` y `termo`, y ejecutar solo las definiciones de la celda 4 y la celda 6.
+**Evaluación v3 → v4 (2026-10):** con los 37 trimestres reales en la PC y 300 réplicas se
+compararon 15 candidatas y 10 variantes de metodología (z-scores, min-max, desestacionalizar
+todo, pesos PCA o por indicador, C ponderada por personas) contra pobreza oficial, EMAE i.a. y
+confianza del consumidor UTDT, más señal/ruido, revisiones y estacionalidad. Las variantes de
+metodología correlacionan 0,93-0,98 con el índice (cambio de segundo orden); las candidatas
+nuevas eran redundantes o ruidosas (detalle en el Anexo A). Lo que mejoró fue: IC (la i.a. de
++11 de v3 en 2026T1 tenía IC −0,2 a +22,6), sin cobertura en lugar de sin descuento y la
+dimensión D (corr. con la pobreza 0,29 → 0,60).
+
+**Probar en la PC (con datos reales):** `python tools/probar_06_local.py --descargar` baja del
+INDEC los zips que falten a `data/raw/`, compila los parquets que falten a `data/processed/`
+(ambos ignorados por git) y ejecuta todas las celdas del notebook salvo el setup de Colab
+(gráficos en `data/processed/figs_06/`, salidas en `data/processed/resultados_06/`). Corre en
+~30 s una vez compilado (la compilación inicial ~1,5 min). Los números coinciden con Colab
+(verificado: réplica exacta de v3). En Windows usar `PYTHONUTF8=1` (la salida usa ✓/⚠/↑/↓).
 
 ## 7. Entorno
 
 - Colab: no requiere instalar nada extra (pandas, pyarrow, matplotlib, seaborn vienen).
 - Local: `pip install -r requirements.txt` (pandas, numpy, matplotlib, seaborn, pyarrow,
   jupyter). Python ≥ 3.10 (se usan type hints `tuple[int, int] | None`).
+- Prueba completa del 06 con datos reales: `python tools/probar_06_local.py --descargar`.
 - Chequeo rápido local de un zip nuevo (sin Colab):
 
 ```python

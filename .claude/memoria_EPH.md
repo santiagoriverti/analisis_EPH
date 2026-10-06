@@ -356,7 +356,10 @@ Códigos confirmados en `EPH_registro_4T2025.pdf` (2026-09-29). Niveles de T4-20
 | `PP02E` | Por qué no buscó: 1 suspendido, 2 trabajo asegurado, **3 se cansó de buscar**, 4 poco trabajo en la época, 5 otras | Desalentados (`ESTADO==3 & PP02E==3`), complementario (~0,1-0,2%) |
 | `PP03C` | 1 un solo empleo, **2 más de un empleo** | Pluriempleo, complementario (~10-12% de ocupados; procíclico) |
 | `PP03J` | Aparte de su trabajo, ¿buscó otro empleo? 1 sí, 2 no, 9 Ns/Nr | Ocupados que buscan otro empleo (% PEA; ~16%) |
-| `PP07H` | ¿Tiene descuento jubilatorio? **1 sí, 2 no** (asalariados) | Asalariados sin descuento (% asalariados; ~36-38%) y asalariados registrados (% población; ~20%) |
+| `PP07H` | ¿Tiene descuento jubilatorio? **1 sí, 2 no** (asalariados) | Asalariados registrados (% población; ~20%) en el índice; asalariados sin descuento (% asalariados; ~36-38%) complementario desde v4 |
+| `CH08` | Cobertura médica: 1 obra social (incl. PAMI), 2 mutual/prepaga/emergencia, 3 planes y seguros públicos, **4 no paga ni le descuentan**, 9 Ns/Nr, 12/13/23/123 combinaciones | Sin cobertura de salud (`CH08==4` sobre códigos válidos, % población; ~31-34%), dimensión B desde v4. Estable entre esquemas (31,3% → 32,1%) |
+| `P21` / `PONDIIO` | Ingreso de la ocupación principal del mes de referencia (mes anterior a la entrevista); no respuesta `-9` con `PONDIIO = 0`; no incluye aguinaldo | Ingreso laboral real: media geométrica de `P21`/IPC, ocupados con `P21 > 0` (dimensión D) |
+| `IPCF` / `PONDIH` | Ingreso per cápita familiar; hogares sin respuesta con `PONDIH = 0` (~25% de las personas); incluye aguinaldo en los meses que corresponde | Personas con `IPCF`/IPC < $3.123 de dic-2016 (60% de la mediana 2017-2019), dimensión D; media geométrica del IPCF real como complementario |
 | `PP07C` | ¿El empleo tiene tiempo de finalización? 1 sí (changa, transitorio), 2 no | No usado (candidata; ~8,5% de asalariados) |
 | `INTENSI` | 1 subocupado, 2 pleno, 3 sobreocupado, 4 no trabajó en la semana | Subocupación (`==1`, % PEA) |
 | `V13` / `V14` / `V15` / `V16` / `V17` | Últimos 3 meses: gastaron ahorros / préstamo de familiares o amigos / préstamo de bancos o financieras / compran en cuotas o al fiado / vendieron pertenencias (1 sí, 2 no) | V13, V14, V17 en el índice; V15, V16 complementarios (señal ambigua) |
@@ -364,6 +367,9 @@ Códigos confirmados en `EPH_registro_4T2025.pdf` (2026-09-29). Niveles de T4-20
 | `V19_A` / `V19_B` | Menores de 10 años aportan dinero trabajando / pidiendo (1 sí, 2 no) | Complementario (~0,0-0,1%) |
 
 Todas estas variables existen en ambos esquemas (antes y después de 4T2023), salvo
-`EMPLEO`/`SECTOR`. La distribución de `PP11O` y `PP03C` es estable entre esquemas
+`EMPLEO`/`SECTOR`. Evaluadas y descartadas en v4: `PP11L` (razón por la que dejó la
+actividad un ex cuentapropista: 1 falta de clientes, 2 falta de capital, 3 estacional, 4 gastos
+altos, 5 otras laborales, 6 jubilación, 7 personales), `PP3E_TOT`/`PP3F_TOT` (horas; 999 =
+Ns/Nr), `PP03G`, `PP07C`, `V3`, `V4` (ver Anexo A del 06). La distribución de `PP11O` y `PP03C` es estable entre esquemas
 (verificado en el diagnóstico de candidatas del notebook 06, hoy Anexo A; `PP11O` se sigue
-monitoreando en la sección 12).
+monitoreando en la sección 13, junto con `CH08`).
