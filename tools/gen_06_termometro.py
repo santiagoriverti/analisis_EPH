@@ -116,8 +116,8 @@ publica ~3 meses después del trimestre; 2020T2-T3 se relevó telefónicamente (
 **Contenido:** 1-5 preparación (setup, carga, indicadores con réplicas bootstrap,
 normalización, incertidumbre) · 6-7 el termómetro hoy (gráfico y lectura automática) · 8-10
 evolución (índice, dimensiones, mapa de calor) · 11 tabla del último trimestre · 12 promedios
-anuales · 13 controles de calidad · 14 exportar · Anexo A diagnóstico de candidatas · Anexo B
-historial de versiones.
+anuales · 13 controles de calidad · 14 exportar (CSV y resumen; los gráficos se guardan en
+Drive al ejecutarse) · Anexo A diagnóstico de candidatas · Anexo B historial de versiones.
 
 *Versión del índice: v4 (2026-10).*
 """)
@@ -190,6 +190,14 @@ TINTA = "#0b0b0b"
 # Franjas del termómetro (colores de estado, siempre acompañados de etiqueta)
 FRANJAS = [(0, 33, "#0ca30c", "Templado"), (33, 66, "#fab219", "Tibio"),
            (66, 100, "#d03b3b", "Fiebre")]
+
+# Cada gráfico se guarda como PNG en Drive al ejecutarse su sección (se sobrescribe en cada corrida)
+GRAFICOS_DIR = os.path.join(RESULTADOS_DIR, "graficos")
+
+def guardar_figura(fig, nombre):
+    """Guarda el gráfico en carga_EPH/resultados/graficos/<nombre>.png (llamar antes de plt.show)."""
+    os.makedirs(GRAFICOS_DIR, exist_ok=True)
+    fig.savefig(os.path.join(GRAFICOS_DIR, f"{nombre}.png"), dpi=150, bbox_inches="tight", facecolor="white")
 
 quarters = list_available_quarters()
 ULTIMO = quarters[-1]
@@ -571,6 +579,7 @@ ax_d.set_xlim(0, 100); ax_d.set_xlabel("Percentil histórico (0 = mejor, 100 = p
 ax_d.set_title("Dimensiones")
 ax_d.legend(loc="lower right", frameon=False)
 plt.tight_layout()
+guardar_figura(fig, "01_termometro_hoy")
 plt.show()
 
 print(f"{ult}: {v:.1f} ({franja(v)}; IC 95% {lo:.1f} a {hi:.1f})")
@@ -735,6 +744,7 @@ ax.set_ylabel("Termómetro (0 = mejor, 100 = peor)")
 ax.set_title("Termómetro de la economía de los hogares - EPH")
 ax.legend(loc="upper left", frameon=False)
 plt.tight_layout()
+guardar_figura(fig, "02_evolucion")
 plt.show()
 ''')
 
@@ -763,6 +773,7 @@ ax.set_ylabel("Percentil histórico (media móvil 4T)")
 ax.set_title("Dimensiones del termómetro (0 = mejor, 100 = peor)")
 ax.legend(loc="upper left", frameon=False)
 plt.tight_layout()
+guardar_figura(fig, "03_dimensiones")
 plt.show()
 ''')
 
@@ -789,6 +800,7 @@ cb = fig.colorbar(im, ax=ax, fraction=0.025, pad=0.01)
 cb.set_label("Percentil (100 = peor)")
 ax.set_title("Indicadores normalizados por trimestre")
 plt.tight_layout()
+guardar_figura(fig, "04_mapa_calor")
 plt.show()
 ''')
 
@@ -854,6 +866,7 @@ ax.set_title("Termómetro por año")
 ax.legend(handles=[mpatches.Patch(color=col, alpha=0.85, label=nombre) for _, _, col, nombre in FRANJAS],
           loc="upper left", frameon=False, ncol=3)
 plt.tight_layout()
+guardar_figura(fig, "05_promedios_anuales")
 plt.show()
 
 anual.round(1)
@@ -931,6 +944,9 @@ directo en Excel en español:
 | `termometro_EPH.csv` | serie trimestral completa: indicadores (`pct_` en %, `pesos_` en pesos de dic-2016), percentiles (`perc_`), dimensiones, termómetro, media móvil, variación interanual, estado e intervalos de confianza (`Termómetro IC ...`, `P(sube)`) |
 | `termometro_EPH_anual.csv` | promedios anuales (sección 12) |
 | `termometro_EPH_resumen.md` | lectura del último trimestre (sección 7) |
+| `graficos/*.png` | los gráficos de las secciones 6, 8, 9, 10 y 12 (`01_termometro_hoy` … `05_promedios_anuales`, 150 dpi); se guardan al ejecutar cada sección |
+
+Todos los archivos se sobrescriben en cada corrida.
 """)
 
 code(r'''
@@ -955,6 +971,8 @@ for nombre, guardar in archivos.items():
     guardar(path)
     print("Guardado:", path)
 print("Serie trimestral:", salida.shape, "| anual:", anual.shape)
+graficos = sorted(os.listdir(GRAFICOS_DIR)) if os.path.isdir(GRAFICOS_DIR) else []
+print(f"Gráficos en {GRAFICOS_DIR}: " + (", ".join(graficos) if graficos else "ninguno"))
 ''')
 
 md("""
@@ -1067,6 +1085,7 @@ if CANDIDATAS:
         ax.set_title(c + (" ($ dic-2016)" if UNIDAD[c] == "$" else " (%)"), pad=16)
         ax.set_xticks(x[::4], ind.index[::4], rotation=90)
     plt.tight_layout()
+    guardar_figura(fig, "anexoA_candidatas")
     plt.show()
 
     # Efecto sobre el índice si se agregaran las candidatas

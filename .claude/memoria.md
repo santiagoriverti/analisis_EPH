@@ -36,6 +36,9 @@ Qué se hizo en la sesión 2026-10-06:
    para el valor puntual y las réplicas. Los 19 indicadores comunes dan idéntico al v3.
 4. Tras la validación: fix de la tabla de la sección 11 (los complementarios en pesos, como el
    ingreso per cápita familiar real, se marcaban "↑ peor"; ahora "↓ peor"). Sin efecto en el índice.
+5. **Gráficos a Drive** (pedido del usuario): `guardar_figura` guarda cada gráfico como PNG
+   (150 dpi) en `carga_EPH/resultados/graficos/` (`01_termometro_hoy` … `05_promedios_anuales`,
+   `anexoA_candidatas` si hay candidatas); se sobrescriben en cada corrida, como los CSV.
 
 **Pendientes / ideas:**
 1. Cosmético (heredado de v3): la lectura dice "media móvil 49,8 (la más baja desde 2025T4)"

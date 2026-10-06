@@ -122,7 +122,9 @@ en anexos, la herramienta para evaluar indicadores candidatos y el historial de 
 
 **Salidas** (en Drive, `carga_EPH/resultados/`, CSV con `;` y decimal `,`):
 `termometro_EPH.csv` (serie trimestral completa con intervalos de confianza),
-`termometro_EPH_anual.csv` y `termometro_EPH_resumen.md` (la lectura del último trimestre).
+`termometro_EPH_anual.csv`, `termometro_EPH_resumen.md` (la lectura del último trimestre) y
+`graficos/` con los 5 gráficos en PNG (`01_termometro_hoy` … `05_promedios_anuales`). Se
+sobrescriben en cada corrida.
 
 **Resultados (v4, T1-2017 → T1-2026):**
 

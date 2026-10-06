@@ -103,7 +103,7 @@ Estructura del notebook (14 secciones + 2 anexos):
 
 | # | Sección | Contenido |
 |---|---|---|
-| 1 | Setup | clona/actualiza repo, monta Drive, copia parquets a `/content/processed_local`, define `RESULTADOS_DIR`; imports, paleta (4 dimensiones), `FRANJAS` |
+| 1 | Setup | clona/actualiza repo, monta Drive, copia parquets a `/content/processed_local`, define `RESULTADOS_DIR`; imports, paleta (4 dimensiones), `FRANJAS`, `GRAFICOS_DIR` y `guardar_figura(fig, nombre)` (PNG 150 dpi en `resultados/graficos/`, se llama antes de cada `plt.show()`) |
 | 2 | Carga | `PERS_COLS` / `HOG_COLS` con `load_panel` + `pd.to_numeric` (salvo `CODUSU`); hogares filtrados a `CH03==1`. `cargar_ipc()`: IPC nacional por API (respaldo `data/ipc_nacional.csv`) → `IPC_Q` (promedio de los meses de referencia = mes anterior a la entrevista) → `P21_REAL`, `IPCF_REAL`; `SIN_IPC` lista los trimestres sin deflactor |
 | 3 | Indicadores + bootstrap | `INDICADORES` (nombre → base, ponderador, función → (numerador, denominador), tipo `pct`/`geo`); `UMBRAL_INGRESO`; un loop por trimestre arma sumas por vivienda (`CODUSU`) y calcula `ind` (puntual) e `ind_boot` (B × trimestres × indicadores) con multiplicadores Poisson `R` |
 | 4 | Normalización | `DIMENSIONES`, `COMPLEMENTARIOS`, `DESESTACIONALIZAR`, `SIGNO`, `desestacionalizar`, `serie_indice`, `percentil_orientado`, `armar_termometro(dimensiones, datos=None)`, `termo` |
@@ -114,7 +114,7 @@ Estructura del notebook (14 secciones + 2 anexos):
 | 11 | Tabla | último trimestre vs año anterior (pp para %, variación % para pesos), percentil y sentido |
 | 12 | Promedios anuales | `anual` (con `Trimestres` para marcar el año incompleto) + barras por franja |
 | 13 | Controles de calidad | cobertura, tamaño de muestra, chequeo de sentido (máximo 2019-2021, pandemia > 66, valle 2023 en el tercio inferior, D > 66 en 2024T1-T2), códigos de `PP11O` y `CH08` por esquema (`dist_codigos`) |
-| 14 | Exportar | `termometro_EPH.csv` (`pct_`/`pesos_`, `perc_`, termómetro, `Termómetro IC ...`), `termometro_EPH_anual.csv`, `termometro_EPH_resumen.md` en `carga_EPH/resultados/` |
+| 14 | Exportar | `termometro_EPH.csv` (`pct_`/`pesos_`, `perc_`, termómetro, `Termómetro IC ...`), `termometro_EPH_anual.csv`, `termometro_EPH_resumen.md` en `carga_EPH/resultados/`; lista los PNG de `graficos/` (`01_termometro_hoy`, `02_evolucion`, `03_dimensiones`, `04_mapa_calor`, `05_promedios_anuales`; `anexoA_candidatas` si hay candidatas) |
 | A | Diagnóstico de candidatas | `CANDIDATAS` (vacío por defecto), 6 criterios + error estándar, índice actual vs con candidatas; registro de evaluaciones |
 | B | Historial de versiones | v1 → v4 y valores de referencia |
 
@@ -164,7 +164,8 @@ dimensión D (corr. con la pobreza 0,29 → 0,60).
 **Probar en la PC (con datos reales):** `python tools/probar_06_local.py --descargar` baja del
 INDEC los zips que falten a `data/raw/`, compila los parquets que falten a `data/processed/`
 (ambos ignorados por git) y ejecuta todas las celdas del notebook salvo el setup de Colab
-(gráficos en `data/processed/figs_06/`, salidas en `data/processed/resultados_06/`). Corre en
+(CSV, resumen y `graficos/` en `data/processed/resultados_06/`, el equivalente local de
+`carga_EPH/resultados/`). Corre en
 ~30 s una vez compilado (la compilación inicial ~1,5 min). Los números coinciden con Colab
 (verificado: réplica exacta de v3, y el CSV de v4 idéntico al de Colab, bootstrap incluido). En Windows usar `PYTHONUTF8=1` (la salida usa ✓/⚠/↑/↓).
 

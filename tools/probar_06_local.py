@@ -7,8 +7,9 @@ Uso (desde la raíz del repo):
 1. (--descargar) Baja los microdatos trimestrales del sitio del INDEC a data/raw/ (~3 MB por
    trimestre) hasta el último publicado.
 2. Compila a data/processed/ los parquets que falten (build_panel, overwrite=False).
-3. Ejecuta todas las celdas de notebooks/06_termometro.ipynb salvo el setup de Colab. Los
-   gráficos van a data/processed/figs_06/ y las salidas a data/processed/resultados_06/.
+3. Ejecuta todas las celdas de notebooks/06_termometro.ipynb salvo el setup de Colab. Las
+   salidas (CSV, resumen y graficos/*.png) van a data/processed/resultados_06/, el equivalente
+   local de carga_EPH/resultados/ en Drive.
 
 data/raw/*.zip y data/processed/* están ignorados por git. Regenerar el notebook antes de
 probar un cambio: python tools/gen_06_termometro.py
@@ -57,33 +58,24 @@ def correr_notebook():
     import matplotlib.pyplot as plt
 
     processed = dl.PROCESSED_DIR
-    figs = os.path.join(processed, "figs_06")
-    os.makedirs(figs, exist_ok=True)
+    resultados = os.path.join(processed, "resultados_06")
 
     def disponibles(search_dirs=None):  # trimestres = parquets compilados
         fs = glob.glob(os.path.join(processed, "eph_T*.parquet"))
         return sorted((2000 + int(os.path.basename(f)[6:8]), int(os.path.basename(f)[5])) for f in fs)
     dl.list_available_quarters = disponibles
-
-    n = [0]
-
-    def guardar_figura(*a, **k):
-        n[0] += 1
-        plt.savefig(os.path.join(figs, f"fig{n[0]:02d}.png"), dpi=90)
-        plt.close("all")
-    plt.show = guardar_figura
+    plt.show = lambda *a, **k: plt.close("all")  # el notebook ya guarda cada gráfico (guardar_figura)
 
     nb = json.load(open(os.path.join(REPO, "notebooks", "06_termometro.ipynb"), encoding="utf-8"))
     celdas = ["".join(c["source"]) for c in nb["cells"] if c["cell_type"] == "code"]
-    ns = {"REPO_DIR": REPO, "PROCESSED_DIR": processed,
-          "RESULTADOS_DIR": os.path.join(processed, "resultados_06"),
+    ns = {"REPO_DIR": REPO, "PROCESSED_DIR": processed, "RESULTADOS_DIR": resultados,
           "display": print, "__name__": "__main__"}
     exec("import sys, os, shutil, glob", ns)  # lo que importa la celda de setup de Colab
     t0 = time.time()
     for i, src in enumerate(celdas[1:], start=1):  # la celda 0 es el setup de Colab
         exec(src.replace("display(Markdown(resumen))", "print(resumen)"), ns)
         print(f"[celda {i} ok]", flush=True)
-    print(f"\nNotebook 06 completo en {time.time() - t0:.0f} s; {n[0]} gráficos en {figs}")
+    print(f"\nNotebook 06 completo en {time.time() - t0:.0f} s; salidas y gráficos en {resultados}")
 
 
 if __name__ == "__main__":
