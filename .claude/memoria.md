@@ -6,8 +6,9 @@
 
 ## ⭐ HANDOFF (última sesión: 2026-10-06)
 
-**Estado: termómetro v4 implementado y probado en la PC con datos reales; falta validarlo en
-Colab.** Datos al día con T1-2026 (37 trimestres, T1-2017 → T1-2026). T2-2026 todavía no
+**Estado: termómetro v4 validado en Colab (2026-10-06): el CSV exportado en Colab es idéntico
+al de la corrida local (diferencia máxima 0,0 en las 56 columnas, bootstrap incluido por la
+semilla fija), IPC por API, controles de la sección 13 todos ✓.** Datos al día con T1-2026 (37 trimestres, T1-2017 → T1-2026). T2-2026 todavía no
 estaba publicado el 2026-10-06 (la URL del INDEC devuelve una página HTML).
 
 Qué se hizo en la sesión 2026-10-06:
@@ -33,10 +34,12 @@ Qué se hizo en la sesión 2026-10-06:
    había descartado ingresos; lo reconsideró con la evidencia. Sección 3 reescrita: un
    diccionario `INDICADORES` define cada indicador una vez (numerador/denominador) y sirve
    para el valor puntual y las réplicas. Los 19 indicadores comunes dan idéntico al v3.
+4. Tras la validación: fix de la tabla de la sección 11 (los complementarios en pesos, como el
+   ingreso per cápita familiar real, se marcaban "↑ peor"; ahora "↓ peor"). Sin efecto en el índice.
 
 **Pendientes / ideas:**
-1. **Validar v4 en Colab** (después del push): correr el 06 y comparar con la referencia v4
-   (2026T1 = 52,8, IC 44,4-60,6; controles de la sección 13 todos ✓; "IPC: API datos.gob.ar").
+1. Cosmético (heredado de v3): la lectura dice "media móvil 49,8 (la más baja desde 2025T4)"
+   cuando el "desde" es el trimestre anterior; podría omitirse en ese caso.
 2. **T2-2026** cuando lo publique el INDEC: subir zip a `carga_EPH`, correr 00 y 01-06 (o
    probar antes en la PC con `tools/probar_06_local.py --descargar`). El IPC ya cubre mar-may 2026.
 3. Extensiones propuestas antes (ninguna empezada): transiciones con el panel rotativo
@@ -71,7 +74,7 @@ ingreso per cápita familiar real (redundante, corr. 0,98 con ingreso bajo), inf
 `EMPLEO==2` (solo ≥2023T4), `V15` y `V16` (señal ambigua), desalentados y niños <10 (ruido),
 pluriempleo (procíclico).
 
-**Resultados v4 (probados en la PC con datos reales, falta Colab):** máx 2020T4 89,7; mín
+**Resultados v4 (validados en Colab = corrida local, 2026-10-06):** máx 2020T4 89,7; mín
 2017T4 13,4; valle 2023T3-T4 31,0 / 32,3 (percentil 18); 2020T2 70,1; 2024T1 56,6; 2024T2 64,4.
 **2026T1 = 52,8 (Tibio; IC 95% 44,4-60,6), +5,4 i.a. (IC −4,4 a +15,1: no significativa, sube
 en el 83% de las réplicas); media móvil 4T 49,8, −6,3 i.a. (IC −11,3 a −0,6: significativa).**
@@ -197,4 +200,4 @@ empleo = ocupados/total; desocupación = desocupados/PEA; subocupación = `INTEN
 - **2026-10-06**: datos reales en la PC (zips del INDEC + `tools/probar_06_local.py`).
   Evaluación del termómetro (bootstrap, 15 candidatas, 10 variantes, validación externa) →
   **v4**: IC bootstrap, sin cobertura de salud en B, dimensión D de ingresos reales (IPC
-  nacional, `data/ipc_nacional.csv`). Probado en la PC; falta validar en Colab.
+  nacional, `data/ipc_nacional.csv`). Validado en Colab (idéntico a la corrida local).

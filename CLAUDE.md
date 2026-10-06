@@ -17,8 +17,8 @@ Proyecto de notebooks (Google Colab) de análisis de la EPH del INDEC.
 7 notebooks (00 compilador + 01 demografía, 02 laboral, 03 ingresos, 04 vivienda,
 05 educación, 06 termómetro 0-100) con **37 trimestres T1-2017 → T1-2026**, validados en
 Colab. El 06 pasó a la **v4** (4 dimensiones con ingresos reales deflactados por IPC,
-intervalos de confianza bootstrap): probada en la PC con datos reales, falta validarla en
-Colab. Pendientes e ideas en el HANDOFF de la memoria.
+intervalos de confianza bootstrap), validada en Colab (idéntica a la corrida local con
+`tools/probar_06_local.py`). Pendientes e ideas en el HANDOFF de la memoria.
 Datos: `.zip` del INDEC en Google Drive (`carga_EPH`), compilados a parquets por
 trimestre en `carga_EPH/processed`. Los datos NO están en el repo: viven en el Drive del
 usuario; el código corre en Colab, así que cambiar de PC solo requiere clonar el repo.

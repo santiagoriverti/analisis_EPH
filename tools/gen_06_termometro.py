@@ -806,8 +806,8 @@ filas = []
 for dim, cols in DIMENSIONES.items():
     for c, signo in cols.items():
         filas.append((dim, c, signo))
-for c in COMPLEMENTARIOS:
-    filas.append(("Complementario (fuera del índice)", c, +1))
+for c in COMPLEMENTARIOS:  # los montos (ingresos) mejoran al subir; el resto son % donde más es peor
+    filas.append(("Complementario (fuera del índice)", c, -1 if UNIDAD[c] == "$" else +1))
 
 def dif(c, a, b):
     return (a / b - 1) * 100 if UNIDAD[c] == "$" else a - b

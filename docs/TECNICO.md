@@ -166,7 +166,7 @@ INDEC los zips que falten a `data/raw/`, compila los parquets que falten a `data
 (ambos ignorados por git) y ejecuta todas las celdas del notebook salvo el setup de Colab
 (gráficos en `data/processed/figs_06/`, salidas en `data/processed/resultados_06/`). Corre en
 ~30 s una vez compilado (la compilación inicial ~1,5 min). Los números coinciden con Colab
-(verificado: réplica exacta de v3). En Windows usar `PYTHONUTF8=1` (la salida usa ✓/⚠/↑/↓).
+(verificado: réplica exacta de v3, y el CSV de v4 idéntico al de Colab, bootstrap incluido). En Windows usar `PYTHONUTF8=1` (la salida usa ✓/⚠/↑/↓).
 
 ## 7. Entorno
 
