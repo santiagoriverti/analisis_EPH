@@ -23,7 +23,7 @@ intervalos de confianza bootstrap), validada en Colab (idéntica a la corrida lo
 antes de la EPH por microsimulación (`src/nowcast.py`), con backtest y registro de versiones.
 Validado en Colab el 2026-10-21 (idéntico a la corrida local).
 **2026-10-21 (tarde):** el 07 proyecta ahora el termómetro completo (A, B y C por ecuaciones puente);
-probado en la PC, **falta Colab**. Requiere correr antes el 06 (toma de su CSV A, B y C).
+validado en Colab el mismo día (idéntico a la corrida local). Requiere correr antes el 06 (toma de su CSV A, B y C).
 Datos: `.zip` del INDEC en Google Drive (`carga_EPH`), compilados a parquets por
 trimestre en `carga_EPH/processed`. Los datos NO están en el repo: viven en el Drive del
 usuario; el código corre en Colab, así que cambiar de PC solo requiere clonar el repo.
