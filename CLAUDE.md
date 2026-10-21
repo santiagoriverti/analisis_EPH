@@ -21,7 +21,9 @@ intervalos de confianza bootstrap), validada en Colab (idéntica a la corrida lo
 `tools/probar_06_local.py`). Pendientes e ideas en el HANDOFF de la memoria.
 **2026-10-20:** nuevo `07_nowcast` (prototipo, solo dimensión D): proyecta los ingresos reales
 antes de la EPH por microsimulación (`src/nowcast.py`), con backtest y registro de versiones.
-Validado en Colab el 2026-10-21 (idéntico a la corrida local); falta sumar A, B y C.
+Validado en Colab el 2026-10-21 (idéntico a la corrida local).
+**2026-10-21 (tarde):** el 07 proyecta ahora el termómetro completo (A, B y C por ecuaciones puente);
+probado en la PC, **falta Colab**. Requiere correr antes el 06 (toma de su CSV A, B y C).
 Datos: `.zip` del INDEC en Google Drive (`carga_EPH`), compilados a parquets por
 trimestre en `carga_EPH/processed`. Los datos NO están en el repo: viven en el Drive del
 usuario; el código corre en Colab, así que cambiar de PC solo requiere clonar el repo.
@@ -38,8 +40,8 @@ usuario; el código corre en Colab, así que cambiar de PC solo requiere clonar 
 - **El notebook 06 se genera** con `tools/gen_06_termometro.py`: editar el script y
   regenerar (`python tools/gen_06_termometro.py`), nunca el `.ipynb` directo.
 - **El notebook 07 se genera** con `tools/gen_07_nowcast.py`; su lógica vive en `src/nowcast.py`
-  (las fórmulas de D y la normalización son copias de las del 06: si cambia el 06, cambiar las
-  dos y verificar con el control de la sección 3 del 07). Probar con `tools/probar_07_local.py`
+  (las fórmulas de D, `DIMENSIONES` y la normalización son copias de las del 06; A, B y C se leen
+  del CSV del 06: si cambia el 06, cambiar las dos y verificar con el control de la sección 3 del 07). Probar con `tools/probar_07_local.py`
   después de correr el 06. Ver `docs/TECNICO.md` §7.
 - No hay datos EPH en el repo. En la PC se pueden tener los datos reales:
   `python tools/probar_06_local.py --descargar` baja los zips del INDEC a `data/raw/`, compila

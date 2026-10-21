@@ -169,16 +169,18 @@ INDEC los zips que falten a `data/raw/`, compila los parquets que falten a `data
 ~30 s una vez compilado (la compilación inicial ~1,5 min). Los números coinciden con Colab
 (verificado: réplica exacta de v3, y el CSV de v4 idéntico al de Colab, bootstrap incluido). En Windows usar `PYTHONUTF8=1` (la salida usa ✓/⚠/↑/↓).
 
-## 7. Notebook 07 — nowcast de la dimensión D (prototipo, 2026-10-20)
+## 7. Notebook 07 — nowcast del termómetro (D 2026-10-20; A, B y C 2026-10-21)
 
 **Se genera:** `python tools/gen_07_nowcast.py`. La lógica vive en `src/nowcast.py`; el notebook
 solo la llama y muestra. Probar: `python tools/probar_07_local.py` (correr antes el 06 si cambió:
-el 07 compara sus indicadores oficiales contra `termometro_EPH.csv`). Salidas en
-`carga_EPH/resultados/nowcast/` (local: `data/processed/resultados_06/nowcast/`). ~40-50 s local.
+el 07 toma de `termometro_EPH.csv` los indicadores de A, B y C y compara contra él D, las
+dimensiones y el termómetro). Salidas en `carga_EPH/resultados/nowcast/` (local:
+`data/processed/resultados_06/nowcast/`). ~2,5 min local (el backtest del termómetro es lo que tarda).
 
-**Objetivo:** tener D (ingresos reales) antes de que salga la EPH (~85 días después del
-trimestre), corregirla cuando sale y registrar cada versión. A, B y C se sumarán con el mismo
-esquema (proyectar cada indicador en sus unidades y pasarlo por la normalización del 06).
+**Objetivo:** tener el termómetro antes de que salga la EPH (~85 días después del trimestre),
+corregirlo cuando sale y registrar cada versión. Cada indicador se proyecta en sus unidades (D por
+microsimulación, A, B y C por ecuaciones puente) y pasa por la normalización del 06 (`termometro`).
+Lo que sigue hasta "Resultados del backtest" es la parte de D; A, B y C al final de la sección.
 
 Piezas de `src/nowcast.py`:
 - **Series (`SERIES`)**: id de datos.gob.ar, desfase en meses y rezago de publicación en días (este
@@ -236,6 +238,61 @@ Sesgo: la proyección es algo pesimista (+2,7 pts de D a k=1, +5 a +10 a k=2-3; 
 EPH crecen ~0,3-0,5% por trimestre más que los índices). Mayor error: 2025T1 (+36,7 pts; el
 ingreso laboral real de la EPH subió 10% contra el trimestre anterior). Un error de 3% en el
 ingreso laboral puede mover D ~10 pts si cae en una zona densa de la historia.
+
+### A, B y C: ecuaciones puente (2026-10-21)
+
+- **Oficiales:** `leer_oficiales(csv06, oficiales_D)` toma del CSV del 06 los 13 indicadores de A, B
+  y C (`pct_`) y les suma los 2 de D recalculados. `DIMENSIONES` y `termometro` son copias del 06
+  (solo los ingresos se desestacionalizan): control del 07 = dimensiones y termómetro idénticos al
+  CSV (dif. < 1e-6). `termometro_tiempo_real` = cada trimestre tal como lo mostró el 06 cuando era
+  el último (contra eso se mide el error).
+- **Predictores (`SERIES`):** EMAE desestacionalizado `143.3_NO_PR_2004_A_31` (rezago ~55 días),
+  SIPA asalariados sin estacionalidad privados `151.1_AARIADOTAC_2012_M_26`, públicos `_25` y casas
+  particulares `_40` (~100 días; se suman en `sipa_asal`), confianza del consumidor UTDT bienes
+  durables e inmuebles `380.3_DESAGREGACLES_0_T_50` (sale en el mes). También se bajan, sin usar, la
+  EIL `50.3_ICS_0_M_12` y el ICC general `380.3_ICC_NACIONNAL_0_T_12`. Trimestres calendario
+  (`meses_cal`), log × 100 salvo la confianza (nivel). Meses sin dato: tendencia de los últimos 3
+  (la confianza, constante; dejar constantes también EMAE y SIPA empeoró el backtest: termómetro a
+  k=3 8,8 → 11,2).
+- **API:** algunas series vienen vacías de la API todo un día; `_bajar_serie` baja entonces el CSV de
+  la distribución (URL y columna salen de `metadata=full`, que sí responde).
+- **`puente`:** sobre el indicador desestacionalizado (factores del 06 hasta la base),
+  Δy_t = Σ β_j·Δx_{j,t}, sin constante, MCO con los trimestres hasta la base sin 2020T1-2021T2;
+  proyección = último valor + Σ β·Δx + estacionalidad. Sin predictores = persistencia. El término
+  autorregresivo (`ar=True`: los cambios de la EPH revierten, autocorrelación hasta −0,48) empeora
+  el backtest: desactivado.
+- **`PREDICTORES`:** los mismos tres (EMAE, `sipa_asal`, `icc_dur`) para los 13 indicadores. Elegir
+  por indicador los de mayor correlación da parecido (termómetro 4,2 vs 4,3 a k=1) pero es
+  optimista (usa el período evaluado).
+- **`proyectar_termometro`:** D (`proyectar_indicadores`) + A, B y C (`proyectar_abc`) con las series
+  preparadas una vez; los 15 se agregan a la historia y pasan por `termometro`. Backtest:
+  `backtest_termometro` (formato largo, una fila por objetivo, horizonte y serie) y
+  `resumir_termometro`; bandas: `error_esperado_serie` (RMSE de cada serie en el horizonte más
+  parecido). Registro: `filas_registro` (una fila por serie: termómetro, dimensiones, 15
+  indicadores) y `conciliar(reg, oficiales, termometro_tiempo_real(...))`.
+
+**Resultados del backtest del termómetro (2026-10-21, 25 trimestres sin pandemia, RMSE en pts):**
+
+| Horizonte | Termómetro | Repetir el último | A, B y C con persistencia |
+|---|---|---|---|
+| k=1, 80 días después del cierre | 4,1 | 7,2 | 5,5 |
+| k=2, al cierre | 7,0 | 12,1 | 9,6 |
+| k=3, 75 días antes del cierre | 8,8 | 15,2 | 13,9 |
+
+Por dimensión (k=1, 80 días; puente vs persistencia): A 11,4 vs 12,0; B 14,2 vs 14,1; C 7,4 vs 8,7;
+a k=2 al cierre A 11,9 vs 15,4, B 18,2 vs 19,1, C 14,8 vs 13,8. **Ojo:** a k=1 la mayor parte de la
+mejora del termómetro viene de que los errores de B quedan correlacionados negativamente con los
+de A y C (−0,30 y −0,40; con persistencia, −0,04 y −0,08) y se compensan en el promedio (varianza
+del promedio de las dimensiones 30,2 → 17,9, con la suma de las varianzas casi igual): puede no
+repetirse, así que el 4,1 es optimista (lo esperable está entre 4,1 y 5,5). A k ≥ 2 la mejora de A
+es sólida. Por indicador, el puente le gana a la persistencia en 5 de 13 (despidos +9%,
+subocupación +7%, vendieron pertenencias +8%, tasa de empleo y desocupación +2%) y pierde en el
+resto (hasta −19% en asalariados registrados): la ganancia está en el agregado.
+
+Nowcast al 21/10/2026 (base 2026T1, termómetro 52,8): 2026T2 = 62,8 (IC 54,5-71,1), 2026T3 = 58,6
+(44,8-72,4), 2026T4 = 54,1 (36,8-71,4). La suba contra T1 es sobre todo estacional (el T2 es peor
+que el T1 en B y C; solo con persistencia daría 61,4); contra el mismo trimestre de 2025: +12,0,
++12,5 y +4,6. EMAE cae en jul-2026 (−2,9% mensual) y la tendencia lo arrastra a los meses sin dato.
 
 ## 8. Entorno
 

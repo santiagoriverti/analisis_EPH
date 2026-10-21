@@ -51,7 +51,7 @@ y unir las bases de nuevo.
 | `04_vivienda.ipynb` | Tipo de vivienda, tenencia, servicios (agua/cloaca), hacinamiento, déficit | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/04_vivienda.ipynb) |
 | `05_educacion.ipynb` | Nivel educativo, asistencia escolar, público/privado, analfabetismo | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/05_educacion.ipynb) |
 | `06_termometro.ipynb` | **Termómetro de la economía de los hogares**: índice de malestar 0-100 (cantidad de empleo y despidos, calidad del empleo, estrategias de supervivencia de los hogares, ingresos reales) con intervalos de confianza: lectura automática del último trimestre, evolución, mapa de calor, promedios anuales, controles de calidad y exportación a Drive | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/06_termometro.ipynb) |
-| `07_nowcast.ipynb` | **Nowcast del termómetro (prototipo, solo dimensión D)**: proyecta los ingresos reales antes de que salga la EPH con una microsimulación sobre la última base (salarios por sector, haberes, AUH, IPC), backtest en pseudo tiempo real y registro de versiones que mide el error cuando llega la EPH oficial | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/07_nowcast.ipynb) |
+| `07_nowcast.ipynb` | **Nowcast del termómetro**: proyecta las cuatro dimensiones antes de que salga la EPH (D por microsimulación sobre la última base con salarios, haberes, AUH e IPC; A, B y C con ecuaciones puente sobre EMAE, empleo registrado SIPA y confianza del consumidor), backtest en pseudo tiempo real y registro de versiones que mide el error cuando llega la EPH oficial | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/07_nowcast.ipynb) |
 
 **Cobertura actual:** 37 trimestres, **T1-2017 → T1-2026** (todos los notebooks validados en Colab).
 
@@ -150,28 +150,34 @@ mano) y se puede probar en la PC con datos reales con `python tools/probar_06_lo
 --descargar`. Detalle metodológico en [`docs/TECNICO.md`](docs/TECNICO.md) §6 y diccionario
 de variables en [`.claude/memoria_EPH.md`](.claude/memoria_EPH.md) §9.
 
-## Nowcast del termómetro (notebook 07, prototipo)
+## Nowcast del termómetro (notebook 07)
 
-La EPH sale ~85 días después de cada trimestre. El 07 **proyecta la dimensión D (ingresos
-reales)** del termómetro antes de esa fecha: toma los microdatos de la última EPH y actualiza el
-ingreso de cada persona con índices mensuales que se publican antes (índice de salarios del
-INDEC por sector, haber mínimo y bono, AUH, IPC), recalcula los indicadores de D con las mismas
-fórmulas del 06 y los normaliza igual. Cuando sale la EPH, el trimestre pasa a oficial y cada
-versión guardada en el **registro de versiones** (`carga_EPH/resultados/nowcast/`) recibe su error.
+La EPH sale ~85 días después de cada trimestre. El 07 **proyecta el termómetro** antes de esa
+fecha, indicador por indicador, y los pasa por la misma normalización del 06:
 
-**Backtest (2019-2026, sin pandemia):** con la EPH del trimestre anterior, la proyección de D erra
-9,5 pts (RMSE) contra 14,8 de repetir el último dato publicado; el ingreso laboral real, 3,5%
-(contra 6,4%), y el % de personas con ingreso bajo, 1,8 pp (contra 3,3). Si la EPH se demora (dos o
-tres trimestres sin dato, como en oct-2026), el error sube a 12-20 pts, pero sigue debajo de
-repetir el último (22-26).
+- **D (ingresos reales):** microsimulación sobre los microdatos de la última EPH, actualizando el
+  ingreso de cada persona con índices mensuales que se publican antes (índice de salarios del
+  INDEC por sector, haber mínimo y bono, AUH, IPC).
+- **A, B y C (empleo, calidad del empleo, estrés de los hogares):** ecuaciones puente: cada
+  indicador cambia en proporción al cambio del EMAE, de los asalariados registrados del SIPA y de la
+  confianza del consumidor de la UTDT (bienes durables), que sale en el mismo mes.
 
-**Nowcast al 20/10/2026** (base 2026T1, D = 31,9; el T2-2026 todavía no estaba publicado):
-2026T2 D = 35 (IC 95% 17-53), 2026T3 = 32 (3-60), 2026T4 = 24 (0-63). Intervalos = ±1,96 × error
-del backtest para ese horizonte.
+Cuando sale la EPH, el trimestre pasa a oficial y cada versión guardada en el **registro de
+versiones** (`carga_EPH/resultados/nowcast/`) recibe su error.
+
+**Backtest (2019-2026, sin pandemia, RMSE):** con la EPH del trimestre anterior, el termómetro
+proyectado erra 4,1 pts contra 7,2 de repetir el último publicado (el ruido muestral de la EPH es
+~3,6); si la EPH se demora dos o tres trimestres, 7-9 contra 12-15. Por dimensión, la ganancia
+está en D (9,5 vs 14,8) y en A; B y C casi no se pueden anticipar. Parte de la mejora del
+termómetro a un trimestre viene de errores de B que compensan los de A y C, así que lo esperable
+es algo peor (entre 4,1 y 5,5).
+
+**Nowcast al 21/10/2026** (base 2026T1 = 52,8; el T2-2026 todavía no estaba publicado):
+2026T2 = 62,8 (IC 95% 54-71), 2026T3 = 58,6 (45-72), 2026T4 = 54,1 (37-71). La suba contra el T1
+es sobre todo estacional; contra el mismo trimestre de 2025: +12,0, +12,5 y +4,6 pts.
 
 Generado con `python tools/gen_07_nowcast.py`; prueba local `python tools/probar_07_local.py`
-(después del 06). Detalle en [`docs/TECNICO.md`](docs/TECNICO.md) §7. Próximo paso: sumar A, B y
-C con el mismo esquema.
+(después del 06). Detalle en [`docs/TECNICO.md`](docs/TECNICO.md) §7.
 
 ## Continuar en otra PC
 

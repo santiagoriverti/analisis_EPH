@@ -4,7 +4,41 @@
 > bloque **HANDOFF**. Detalle técnico en [`docs/TECNICO.md`](../docs/TECNICO.md);
 > diccionario de variables en [`memoria_EPH.md`](memoria_EPH.md).
 
-## ⭐ HANDOFF (última sesión: 2026-10-20/21)
+## ⭐ HANDOFF (última sesión: 2026-10-21, tarde)
+
+**Estado: el 07 proyecta ahora el termómetro completo** (D por microsimulación, A, B y C por
+ecuaciones puente), probado en la PC con datos reales (control contra el 06 ✓, ~2,5 min).
+Pusheado a `main` (2026-10-21); **falta correrlo en Colab** (después del 06). T2-2026 seguía sin publicarse.
+
+Qué se hizo (pedido del usuario: "vamos con las dimensiones A, B y C"):
+1. **Predictores** (correlación de cambios trimestrales con la EPH desestacionalizada, sin
+   pandemia): la confianza del consumidor UTDT en bienes durables es la que más anticipa (−0,59 con
+   despidos, −0,52 con gastaron ahorros), después los asalariados registrados del SIPA y el EMAE.
+   Sin cobertura, buscan otro empleo y alimentos del gobierno no correlacionan con nada.
+2. **`src/nowcast.py`:** series nuevas en `SERIES` (EMAE, SIPA privados/públicos/casas particulares,
+   EIL, ICC general y bienes durables), respaldo `data/series_nowcast.csv` regenerado con ellas,
+   fallback al CSV de la distribución cuando la API devuelve vacío (`_bajar_distribucion`),
+   `leer_oficiales` (A, B y C del CSV del 06), `termometro`, `puente`, `proyectar_termometro`,
+   `backtest_termometro`, registro general (una fila por serie). Detalle: `docs/TECNICO.md` §7.
+3. **Decisiones con backtest:** los mismos 3 predictores para todos (elegir por indicador es
+   parecido pero optimista); sin término AR (empeora); meses faltantes con tendencia (constante
+   empeora).
+4. **Resultados (RMSE termómetro):** k=1 4,1 (repetir el último 7,2; A, B y C con persistencia
+   5,5); k=2 7,0 (12,1; 9,6); k=3 8,8 (15,2; 13,9). Ojo: a k=1 la mejora viene sobre todo de errores
+   de B que compensan los de A y C (puede no repetirse); por dimensión: A 11,4 vs 12,0, B 14,2 vs
+   14,1, C 7,4 vs 8,7.
+5. **Nowcast al 21/10/2026:** 2026T2 = 62,8 (IC 54,5-71,1), T3 = 58,6, T4 = 54,1. La suba contra T1
+   (52,8) es sobre todo estacional; interanual +12,0, +12,5, +4,6.
+
+**Pendientes / ideas:**
+1. Correr 06 + 07 en Colab y comparar con la corrida local.
+2. Cuando salga T2-2026: correr 00, 06 y 07; el registro concilia las versiones D-microsim v1 y
+   termómetro v1 del 21/10 (primer error real).
+3. Serie mensual (trimestre móvil con Chow-Lin) y actualización semanal con el ICR-SEPA.
+4. Mejorar B y C (candidatas: morosidad de familias BCRA, préstamos personales reales) y revisar si
+   la compensación de errores entre dimensiones se sostiene con los errores reales del registro.
+
+### Sesión anterior (2026-10-20/21: prototipo de D)
 
 **Estado: nuevo notebook `07_nowcast` (prototipo, solo dimensión D), pusheado a `main` (95491f8)
 y validado en Colab el 2026-10-21: backtest, resumen y nowcast idénticos a la corrida local
@@ -206,7 +240,7 @@ Total panel previo a T126: 1.825.881 filas (36 trimestres).
 - Sin dependencia de `pyeph`. Toda la lógica de carga en `src/data_loader.py`.
 - Detalle de funciones, gotchas y decisiones: [`docs/TECNICO.md`](../docs/TECNICO.md).
 
-## Notebooks (todos validados en Colab)
+## Notebooks (00-06 validados en Colab; 07: D validado, A-B-C probado en la PC)
 
 | NB | Contenido | Base / ponderador |
 |---|---|---|
@@ -217,7 +251,7 @@ Total panel previo a T126: 1.825.881 filas (36 trimestres).
 | 04 | Tipo de vivienda (`IV1`), tenencia (`II7`), agua (`IV6`), desagüe (`IV11`), hacinamiento (`IX_TOT`/`II1`, crítico >3) | Hogar (jefe `CH03==1`) / `PONDERA` |
 | 05 | `NIVEL_ED` 25+, asistencia (`CH10`), público/privado (`CH11`), analfabetismo (`CH09`) | Personas / `PONDERA` |
 | 06 | Termómetro de la economía de los hogares 0-100, v4 con IC (ver sección Termómetro). Generado por `tools/gen_06_termometro.py`; prueba local `tools/probar_06_local.py` | Personas + Hogar / `PONDERA`, `PONDIIO`, `PONDIH` + IPC |
-| 07 | **Nowcast** de la dimensión D (prototipo, 2026-10-20; validado en Colab 2026-10-21): microsimulación sobre la última EPH, backtest, registro de versiones. Generado por `tools/gen_07_nowcast.py` (lógica en `src/nowcast.py`); prueba local `tools/probar_07_local.py` | Personas / `PONDIIO`, `PONDIH` + series de datos.gob.ar |
+| 07 | **Nowcast del termómetro**: D por microsimulación (validado en Colab 2026-10-21); A, B y C por ecuaciones puente (2026-10-21, probado en la PC): microsimulación sobre la última EPH, backtest, registro de versiones. Generado por `tools/gen_07_nowcast.py` (lógica en `src/nowcast.py`); prueba local `tools/probar_07_local.py` | Personas / `PONDIIO`, `PONDIH` + series de datos.gob.ar |
 
 Definiciones INDEC usadas en 02: PEA = `ESTADO∈{1,2}`; actividad = PEA/total;
 empleo = ocupados/total; desocupación = desocupados/PEA; subocupación = `INTENSI==1`/PEA.
@@ -251,3 +285,5 @@ empleo = ocupados/total; desocupación = desocupados/PEA; subocupación = `INTEN
 - **2026-10-20**: diseño del nowcast del termómetro (proyectar indicadores, corregir con la EPH,
   registro de versiones) y prototipo `07_nowcast` para la dimensión D (microsimulación, backtest
   2019-2026: D 9,5 pts vs 14,8 de repetir el último). Validado en Colab el 2026-10-21 (idéntico al local).
+- **2026-10-21 (tarde)**: A, B y C por ecuaciones puente (EMAE, SIPA, confianza del consumidor);
+  el 07 proyecta el termómetro completo (backtest k=1: 4,1 pts vs 7,2 de repetir el último).

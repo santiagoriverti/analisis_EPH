@@ -42,11 +42,20 @@ SERIES = {
     "sal_noreg": ("149.1_SOR_PRIADO_OCTU_0_28", 6, 45),  # no registrado, sector privado
     "haber_min": ("58.1_MP_0_M_24", 0, -30),             # haber mínimo jubilatorio (sin bono)
     "auh": ("165.1_AAUH_0_0_3", 0, -30),
+    # Predictores de las dimensiones A, B y C (ecuaciones puente)
+    "emae": ("143.3_NO_PR_2004_A_31", 0, 55),             # EMAE desestacionalizado
+    "sipa_priv": ("151.1_AARIADOTAC_2012_M_26", 0, 100),  # SIPA asalariados privados, sin estac.
+    "sipa_pub": ("151.1_AARIADOTAC_2012_M_25", 0, 100),   # SIPA asalariados públicos, sin estac.
+    "sipa_casas": ("151.1_AARIADOTAC_2012_M_40", 0, 100), # SIPA casas particulares, sin estac.
+    "eil": ("50.3_ICS_0_M_12", 0, 80),                    # Encuesta de Indicadores Laborales: empleo
+    "icc": ("380.3_ICC_NACIONNAL_0_T_12", 0, -10),        # confianza del consumidor UTDT (sale en el mes)
+    "icc_dur": ("380.3_DESAGREGACLES_0_T_50", 0, -10),    # ídem, subíndice bienes durables e inmuebles
 }
 REZAGO_BONO = -30  # el bono previsional se decreta antes de pagarse
 # Meses sin dato publicado: se completan con la variación de la guía (si la hay) o con la mediana de
-# la variación de los últimos 3 meses. El bono se mantiene constante.
+# la variación de los últimos 3 meses. El bono y la confianza del consumidor se mantienen constantes.
 GUIA = {"sal_noreg": "sal_priv"}
+PLANAS = {"bono", "icc", "icc_dur"}
 DIAS_EPH = 85  # la EPH se publica ~85 días después del cierre del trimestre
 
 IND_LABORAL = "Ingreso laboral real"
@@ -124,11 +133,28 @@ def prom_ref(s: pd.Series, q: str) -> float:
 # --------------------------------------------------------------------------------------------
 # Series de alta frecuencia
 # --------------------------------------------------------------------------------------------
+def _bajar_distribucion(serie_id: str) -> pd.Series | None:
+    """La serie desde el CSV completo de su distribución en el catálogo (la URL y el nombre de la
+    columna salen de la metadata de la API, que responde aunque los datos vengan vacíos)."""
+    try:
+        r = requests.get(API_SERIES, params={"ids": serie_id, "metadata": "full", "limit": 1}, timeout=60)
+        r.raise_for_status()
+        meta = r.json()["meta"][1]
+        url, col = meta["distribution"]["downloadURL"], meta["field"]["title"]
+        d = pd.read_csv(io.BytesIO(requests.get(url, timeout=180).content))
+        s = pd.Series(pd.to_numeric(d[col], errors="coerce").to_numpy(),
+                      index=pd.PeriodIndex(pd.to_datetime(d["indice_tiempo"]), freq="M"))
+        return s.dropna() if s.notna().any() else None
+    except (requests.RequestException, ValueError, KeyError, IndexError, pd.errors.ParserError):
+        return None
+
+
 def _bajar_serie(serie_id: str, desde: str = "2016-10-01", intentos: int = 5) -> pd.Series | None:
     """Serie de la API de datos.gob.ar (fechada como en la API) o None.
 
-    La API falla de forma intermitente: a veces devuelve una tabla vacía. Se reintenta y nunca se
-    devuelve una serie vacía."""
+    La API falla de forma intermitente: a veces devuelve una tabla vacía (para algunas series, todo
+    un día). Se reintenta, después se baja el CSV de la distribución y nunca se devuelve una serie
+    vacía."""
     for k in range(intentos):
         try:
             r = requests.get(API_SERIES, params={"ids": serie_id, "format": "csv", "limit": 1000,
@@ -140,8 +166,10 @@ def _bajar_serie(serie_id: str, desde: str = "2016-10-01", intentos: int = 5) ->
                 return s.dropna()
         except (requests.RequestException, pd.errors.ParserError, pd.errors.EmptyDataError, IndexError):
             pass
-        time.sleep(2 * (k + 1))
-    return None
+        if k < intentos - 1:
+            time.sleep(2 * (k + 1))
+    s = _bajar_distribucion(serie_id)
+    return None if s is None else s[s.index >= pd.Period(desde, "M")]
 
 
 def leer_bono(ruta: str) -> pd.Series:
@@ -222,8 +250,10 @@ def preparar_series(series: dict, hasta: pd.Period, fecha: pd.Timestamp | None =
     datos_hasta = {n: s.index[-1] for n, s in base.items()}
     # La guía solo aporta sus meses con dato real; después, cada serie sigue su propia tendencia
     # (seguir también la tendencia de la guía empeoró el backtest: k=2 a −75 días, 14,8 -> 17,8 pts).
-    S = {n: extender(s, hasta, guia=base.get(GUIA.get(n)), plana=(n == "bono")) for n, s in base.items()}
+    S = {n: extender(s, hasta, guia=base.get(GUIA.get(n)), plana=(n in PLANAS)) for n, s in base.items()}
     S["haber_bono"] = S["haber_min"] + S["bono"].reindex(S["haber_min"].index).fillna(0.0)
+    if {"sipa_priv", "sipa_pub", "sipa_casas"} <= set(S):  # asalariados registrados totales
+        S["sipa_asal"] = (S["sipa_priv"] + S["sipa_pub"] + S["sipa_casas"]).dropna()
     return S, datos_hasta
 
 
@@ -386,7 +416,7 @@ def _microsim(base: Base, b: str, x: str, S: dict, umbral: float) -> dict:
 
 def proyectar_indicadores(objetivo: str, base: str, bases: dict, oficiales: pd.DataFrame, series: dict,
                           umbral: float, fecha: pd.Timestamp | None = None,
-                          metodo: str = "estacional") -> tuple[pd.DataFrame, dict]:
+                          metodo: str = "estacional", pre: tuple | None = None) -> tuple[pd.DataFrame, dict]:
     """Indicadores de D proyectados de base+1 a `objetivo` (sin corregir la deriva).
 
     Métodos:
@@ -394,8 +424,9 @@ def proyectar_indicadores(objetivo: str, base: str, bases: dict, oficiales: pd.D
       los factores del 06 estimados hasta `base` (el aguinaldo cae en el T1 y el T3).
     - "anual": microsimula desde el mismo trimestre del año anterior (misma estacionalidad, pero
       con la composición de los hogares de un año atrás).
+    `pre`: resultado de `preparar_series` ya calculado (para no repetirlo).
     Devuelve (indicadores por trimestre, último mes con dato real de cada serie)."""
-    S, datos_hasta = preparar_series(series, meses_ref(objetivo)[-1], fecha)
+    S, datos_hasta = pre or preparar_series(series, meses_ref(objetivo)[-1], fecha)
     fac = {c: factores_estacionales(oficiales.loc[:base, c]) for c in SIGNOS_D}
     filas = {}
     for x in rango(base, objetivo)[1:]:
@@ -559,29 +590,230 @@ def error_esperado(resumen: pd.DataFrame, k: int, dias: int, metodo: str = "esta
 
 
 # --------------------------------------------------------------------------------------------
+# Dimensiones A, B y C: ecuaciones puente; termómetro completo
+# --------------------------------------------------------------------------------------------
+DIMENSIONES = {  # copia de DIMENSIONES del 06 (indicador -> signo)
+    "A. Cantidad de empleo": {"Desocupación": +1, "Tasa de empleo": -1,
+                              "Desocupación >1 año": +1, "Desocupados por despido (incl. renuncia forzada)": +1},
+    "B. Calidad del empleo": {"Subocupación": +1, "Ocupados que buscan otro empleo": +1,
+                              "Sin cobertura de salud": +1,
+                              "Tasa de empleo asalariado registrado": -1},
+    "C. Estrés de los hogares": {"Gastaron ahorros": +1, "Préstamos de familiares/amigos": +1,
+                                 "Vendieron pertenencias": +1,
+                                 "Alimentos de gobierno/instituciones": +1,
+                                 "Alimentos de familiares/vecinos": +1},
+    DIM_D: dict(SIGNOS_D),
+}
+DESESTACIONALIZAR = list(SIGNOS_D)  # en el 06 solo se desestacionalizan los ingresos
+IND_ABC = [c for dim, cols in DIMENSIONES.items() if dim != DIM_D for c in cols]
+TERMO = "Termómetro"
+NIVEL = {"icc", "icc_dur"}  # predictores en nivel (el resto, en log × 100)
+
+# Predictores de A, B y C: los mismos tres para todos los indicadores (actividad, empleo registrado
+# y confianza del consumidor), sin elegirlos indicador por indicador mirando la muestra (elegir los de
+# mayor correlación da un backtest parecido pero optimista: usa información del período evaluado).
+PREDICTORES_ABC = ["emae", "sipa_asal", "icc_dur"]
+PREDICTORES = {c: list(PREDICTORES_ABC) for c in IND_ABC}
+
+
+def meses_cal(q: str) -> list[pd.Period]:
+    """Meses calendario del trimestre (las preguntas de empleo y de estrategias de los hogares se
+    refieren a la semana o a los meses previos a la entrevista, que se reparte en el trimestre)."""
+    m0 = periodo(q).asfreq("M", how="start")
+    return [m0, m0 + 1, m0 + 2]
+
+
+def x_trimestral(S: dict, nombres) -> pd.DataFrame:
+    """Predictores trimestrales: promedio de los meses calendario (log × 100 salvo NIVEL)."""
+    out = {}
+    for n in nombres:
+        s = S[n]
+        g = s.groupby(s.index.asfreq("Q"))
+        q = g.mean()[g.count() == 3]
+        q.index = [etiqueta(p) for p in q.index]
+        out[n] = q if n in NIVEL else np.log(q) * 100
+    return pd.DataFrame(out)
+
+
+def leer_oficiales(csv06: str, oficiales_D: pd.DataFrame) -> pd.DataFrame:
+    """Los 15 indicadores del termómetro: A, B y C del CSV del 06 (`pct_`), D recalculado acá."""
+    d06 = pd.read_csv(csv06, sep=";", index_col=0, decimal=",")
+    abc = pd.DataFrame({c: d06["pct_" + c] for c in IND_ABC})
+    return pd.concat([abc, oficiales_D[list(SIGNOS_D)]], axis=1, join="inner")
+
+
+def termometro(raw: pd.DataFrame) -> pd.DataFrame:
+    """Dimensiones y termómetro (0-100) a partir de los indicadores en sus unidades, como el 06."""
+    norm = pd.DataFrame({c: percentil_orientado(desestacionalizar(raw[c]) if c in DESESTACIONALIZAR else raw[c], s)
+                         for dim in DIMENSIONES.values() for c, s in dim.items()})
+    dims = pd.DataFrame({dim: norm[list(cols)].mean(axis=1) for dim, cols in DIMENSIONES.items()})
+    dims[TERMO] = dims.mean(axis=1)
+    return dims
+
+
+def termometro_tiempo_real(oficiales: pd.DataFrame) -> pd.DataFrame:
+    """Dimensiones y termómetro de cada trimestre tal como los mostró el 06 cuando era el último."""
+    return pd.DataFrame({q: termometro(oficiales.loc[:q]).loc[q] for q in oficiales.index}).T
+
+
+def puente(y: pd.Series, X: pd.DataFrame, base: str, objetivo: str, ar: bool = False) -> pd.Series:
+    """Proyección de un indicador de A, B o C de base+1 a `objetivo`.
+
+    Sobre el indicador desestacionalizado (factores del 06 estimados hasta la base):
+        Δy_t = Σ β_j·Δx_{j,t}  [+ γ·Δy_{t-1} si `ar`]   (sin constante; MCO con los trimestres
+                                                         hasta la base, sin 2020T1-2021T2)
+    Sin predictores es la persistencia. El término γ (los cambios de la EPH revierten porque buena
+    parte es ruido de muestra) empeoró el backtest: queda desactivado. `y`: oficiales hasta la base;
+    `X`: predictores trimestrales hasta el objetivo. Devuelve el indicador proyectado (con su
+    estacionalidad)."""
+    y = y.loc[:base]
+    fac = factores_estacionales(y)
+    yd = y - fac.reindex(y.index.str[-1]).fillna(0.0).to_numpy()  # historia corta: sin factor = 0
+    dy, dX = yd.diff(), X.diff()
+    cols = list(X.columns)
+    excl = pd.Series(dy.index.isin(EXCLUIR_ESTACIONAL), index=dy.index)
+    ok = ~excl & ~excl.shift(1, fill_value=True) & dy.notna() & (dy.shift(1).notna() | (not ar))
+    Xh = dX.reindex(dy.index)[cols]
+    ok &= Xh.notna().all(axis=1)
+    regresores = ([dy.shift(1)[ok].to_numpy()] if ar else []) + [Xh.loc[ok, c].to_numpy() for c in cols]
+    coef = (np.linalg.lstsq(np.column_stack(regresores), dy[ok].to_numpy(), rcond=None)[0]
+            if regresores and ok.sum() > len(regresores) else np.zeros(len(regresores)))
+    gamma, beta = (coef[0], coef[1:]) if ar else (0.0, coef)
+    futuro = dX.reindex(rango(base, objetivo)[1:])[cols].to_numpy()
+    prev, nivel, out = dy[base], yd[base], {}
+    for i, x in enumerate(rango(base, objetivo)[1:]):
+        d = gamma * prev + (float(futuro[i] @ beta) if cols else 0.0)
+        nivel, prev = nivel + d, d
+        out[x] = nivel + fac.get(x[-1], 0.0)
+    return pd.Series(out)
+
+
+def proyectar_abc(objetivo: str, base: str, oficiales: pd.DataFrame, series: dict,
+                  fecha: pd.Timestamp | None = None, predictores: dict | None = None, ar: bool = False,
+                  pre: tuple | None = None) -> tuple[pd.DataFrame, dict]:
+    """Indicadores de A, B y C proyectados de base+1 a `objetivo` (y último mes con dato de cada serie)."""
+    predictores = PREDICTORES if predictores is None else predictores
+    S, datos_hasta = pre or preparar_series(series, meses_cal(objetivo)[-1], fecha)
+    X = x_trimestral(S, sorted({p for ps in predictores.values() for p in ps}))
+    proy = pd.DataFrame({c: puente(oficiales[c], X[predictores.get(c, [])], base, objetivo, ar) for c in IND_ABC})
+    return proy, datos_hasta
+
+
+def proyectar_termometro(objetivo: str, base: str, bases: dict, oficiales: pd.DataFrame, series: dict,
+                         umbral: float, fecha: pd.Timestamp | None = None, predictores: dict | None = None,
+                         ar: bool = False) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
+    """(los 15 indicadores proyectados de base+1 a `objetivo`, dimensiones y termómetro de esos
+    trimestres, último mes con dato de cada serie). D por microsimulación; A, B y C por `puente`."""
+    pre = preparar_series(series, meses_cal(objetivo)[-1], fecha)  # cubre también los meses de referencia de D
+    proy_d, _ = proyectar_indicadores(objetivo, base, bases, oficiales, series, umbral, fecha, pre=pre)
+    proy_abc, datos_hasta = proyectar_abc(objetivo, base, oficiales, series, fecha, predictores, ar, pre=pre)
+    proy = pd.concat([proy_abc, proy_d], axis=1)[list(oficiales.columns)]
+    termo = termometro(pd.concat([oficiales.loc[:base], proy]))
+    return proy, termo.loc[proy.index], datos_hasta
+
+
+def persistencia(oficiales: pd.DataFrame, base: str, objetivo: str) -> pd.Series:
+    """Benchmark: cada indicador de la base corregido por estacionalidad."""
+    hist = oficiales.loc[:base]
+    fac = {c: factores_estacionales(hist[c]) for c in hist.columns}
+    return pd.Series({c: hist[c].iloc[-1] + fac[c].get(objetivo[-1], 0.0) - fac[c].get(base[-1], 0.0)
+                      for c in hist.columns})
+
+
+def backtest_termometro(bases: dict, oficiales: pd.DataFrame, series: dict, umbral: float, objetivos: list[str],
+                        grilla: list[tuple[int, int]] | None = None, predictores: dict | None = None,
+                        ar: bool = False) -> pd.DataFrame:
+    """Backtest en pseudo tiempo real del termómetro completo (formato largo: una fila por objetivo,
+    horizonte y serie). `serie` = indicador, dimensión o "Termómetro"; `valor` = proyección,
+    `oficial` = valor publicado (para dimensiones y termómetro, tal como lo mostró el 06 cuando ese
+    trimestre era el último), `ultimo` = repetir el último publicado (dimensiones y termómetro) o
+    persistencia (indicadores)."""
+    grilla = list(grilla or grilla_horizontes())
+    T_rt = termometro_tiempo_real(oficiales)
+    filas = []
+    for q in objetivos:
+        for k, dias in grilla:
+            b = desplazar(q, -k)
+            if b not in oficiales.index or desplazar(q, -4) not in bases:
+                continue
+            fecha = fin_trimestre(q) + pd.Timedelta(days=dias)
+            proy, termo, _ = proyectar_termometro(q, b, bases, oficiales, series, umbral, fecha, predictores, ar)
+            pers = persistencia(oficiales, b, q)
+            for c in oficiales.columns:
+                filas.append({"trimestre": q, "k": k, "dias": dias, "base": b, "serie": c, "tipo": "indicador",
+                              "valor": proy.loc[q, c], "oficial": oficiales.loc[q, c], "ultimo": pers[c]})
+            for c in termo.columns:
+                filas.append({"trimestre": q, "k": k, "dias": dias, "base": b, "serie": c,
+                              "tipo": "termómetro" if c == TERMO else "dimensión",
+                              "valor": termo.loc[q, c], "oficial": T_rt.loc[q, c], "ultimo": T_rt.loc[b, c]})
+    bt = pd.DataFrame(filas)
+    bt["error"] = bt["valor"] - bt["oficial"]
+    bt["error_ultimo"] = bt["ultimo"] - bt["oficial"]
+    return bt
+
+
+def resumir_termometro(bt: pd.DataFrame, sin_pandemia: bool = True) -> pd.DataFrame:
+    """RMSE por (k, días, serie) de la proyección y del benchmark, y cuánto lo mejora (%)."""
+    d = bt[~bt["trimestre"].isin(PANDEMIA)] if sin_pandemia else bt
+    rmse = lambda x: float(np.sqrt(np.mean(np.square(x))))  # noqa: E731
+    r = d.groupby(["k", "dias", "serie"], sort=False).agg(
+        n=("error", "size"), error=("error", rmse), ultimo=("error_ultimo", rmse), sesgo=("error", "mean"))
+    r["mejora_%"] = (1 - r["error"] / r["ultimo"]) * 100
+    return r.sort_index()
+
+
+def error_esperado_serie(resumen: pd.DataFrame, k: int, dias: int) -> tuple[pd.Series, tuple[int, int]]:
+    """RMSE del backtest del termómetro (`resumir_termometro`) de cada serie para el horizonte más
+    parecido: el mismo k (o el más cercano) y los días más cercanos. Devuelve (RMSE por serie, (k, días))."""
+    hs = sorted({(kk, dd) for kk, dd, _ in resumen.index})
+    k0 = min({kk for kk, _ in hs}, key=lambda x: abs(x - k))
+    d0 = min((dd for kk, dd in hs if kk == k0), key=lambda x: abs(x - dias))
+    return resumen.loc[(k0, d0), "error"], (k0, d0)
+
+
+NOMBRE_PREDICTOR = {"emae": "EMAE (actividad)", "sipa_asal": "Asalariados registrados (SIPA)",
+                    "icc_dur": "Confianza del consumidor: bienes durables"}
+
+
+def variaciones_abc(base: str, objetivo: str, series: dict, fecha: pd.Timestamp | None = None) -> pd.DataFrame:
+    """Cambio de cada predictor de A, B y C entre el trimestre base y el objetivo (en % para las
+    series en log, en puntos para la confianza) y cuántos meses del objetivo son estimados."""
+    S, datos_hasta = preparar_series(series, meses_cal(objetivo)[-1], fecha)
+    datos_hasta["sipa_asal"] = min(datos_hasta[n] for n in ("sipa_priv", "sipa_pub", "sipa_casas"))
+    X = x_trimestral(S, PREDICTORES_ABC)
+    filas = {}
+    for n in PREDICTORES_ABC:
+        cambio = X.loc[objetivo, n] - X.loc[base, n]
+        filas[NOMBRE_PREDICTOR[n]] = {
+            "Cambio": f"{cambio:+.1f} pts" if n in NIVEL else f"{np.expm1(cambio / 100) * 100:+.1f}%",
+            "Último mes con dato": str(datos_hasta[n]),
+            "Meses estimados": sum(m > datos_hasta[n] for m in meses_cal(objetivo))}
+    return pd.DataFrame(filas).T
+
+
+# --------------------------------------------------------------------------------------------
 # Registro de versiones
 # --------------------------------------------------------------------------------------------
 COLUMNAS_REGISTRO = ["fecha_corrida", "version", "trimestre", "dias_al_cierre", "base_EPH", "indicador",
                      "valor", "ic_inf", "ic_sup", "datos_hasta", "oficial", "error"]
 
 
-def filas_registro(fecha: pd.Timestamp, version: str, trimestre: str, base: str, proy: pd.DataFrame, D: float,
-                   err: pd.Series, datos_hasta: dict) -> pd.DataFrame:
-    """Filas del registro para una proyección (los IC usan el error del backtest, ±1,96 × RMSE)."""
+def filas_registro(fecha: pd.Timestamp, version: str, trimestre: str, base: str, valores: pd.Series,
+                   rmse: pd.Series, datos_hasta: dict) -> pd.DataFrame:
+    """Filas del registro para una proyección: una por serie de `valores` (indicadores, dimensiones,
+    termómetro). Los IC son ±1,96 × el RMSE del backtest de cada serie (`rmse`), acotados a 0-100
+    para dimensiones y termómetro y a ≥ 0 para los indicadores."""
     z = 1.96
-    v_lab, v_bajo = proy.loc[trimestre, IND_LABORAL], proy.loc[trimestre, IND_BAJO]
     datos = "; ".join(f"{n} {m}" for n, m in datos_hasta.items())
     comunes = {"fecha_corrida": fecha.strftime("%Y-%m-%d"), "version": version, "trimestre": trimestre,
                "dias_al_cierre": int((fecha - fin_trimestre(trimestre)).days), "base_EPH": base,
                "datos_hasta": datos, "oficial": np.nan, "error": np.nan}
-    filas = [
-        {**comunes, "indicador": IND_LABORAL, "valor": v_lab,
-         "ic_inf": v_lab * (1 - z * err["laboral_pct"] / 100), "ic_sup": v_lab * (1 + z * err["laboral_pct"] / 100)},
-        {**comunes, "indicador": IND_BAJO, "valor": v_bajo,
-         "ic_inf": v_bajo - z * err["bajo_pp"], "ic_sup": v_bajo + z * err["bajo_pp"]},
-        {**comunes, "indicador": DIM_D, "valor": D,
-         "ic_inf": max(0.0, D - z * err["D"]), "ic_sup": min(100.0, D + z * err["D"])},
-    ]
+    filas = []
+    for serie, v in valores.items():
+        e = rmse.get(serie, np.nan)
+        tope = 100.0 if (serie in DIMENSIONES or serie == TERMO) else np.inf
+        filas.append({**comunes, "indicador": serie, "valor": v,
+                      "ic_inf": max(0.0, v - z * e), "ic_sup": min(tope, v + z * e)})
     return pd.DataFrame(filas, columns=COLUMNAS_REGISTRO)
 
 
@@ -597,16 +829,17 @@ def registrar(ruta: str, nuevas: pd.DataFrame) -> pd.DataFrame:
     return reg
 
 
-def conciliar(reg: pd.DataFrame, oficiales: pd.DataFrame, D_rt: pd.Series) -> pd.DataFrame:
-    """Completa el valor oficial y el error de las proyecciones cuyo trimestre ya publicó la EPH.
-
-    El D oficial es el que mostró el 06 cuando ese trimestre era el último (`D_tiempo_real`)."""
+def conciliar(reg: pd.DataFrame, oficiales: pd.DataFrame, rt: pd.DataFrame | pd.Series) -> pd.DataFrame:
+    """Completa el valor oficial y el error (proyectado − oficial) de las proyecciones cuyo trimestre
+    ya publicó la EPH. Para dimensiones y termómetro, el oficial es el que mostró el 06 cuando ese
+    trimestre era el último (`rt` = `termometro_tiempo_real`; una Series se toma como D)."""
+    rt = rt.to_frame(DIM_D) if isinstance(rt, pd.Series) else rt
     reg = reg.copy()
     for i, f in reg.iterrows():
-        q = f["trimestre"]
+        q, serie = f["trimestre"], f["indicador"]
         if q not in oficiales.index:
             continue
-        of = D_rt[q] if f["indicador"] == DIM_D else oficiales.loc[q, f["indicador"]]
+        of = rt.loc[q, serie] if serie in rt.columns else oficiales.loc[q, serie] if serie in oficiales.columns else np.nan
         reg.loc[i, "oficial"] = of
         reg.loc[i, "error"] = f["valor"] - of
     return reg
