@@ -7,25 +7,27 @@ Proyecto de notebooks (Google Colab) de análisis de la EPH del INDEC.
 1. [`.claude/memoria.md`](.claude/memoria.md) — estado, pendientes, flujo para agregar
    trimestres, valores de referencia y reglas. **Empezar por el bloque ⭐ HANDOFF.**
 2. [`docs/TECNICO.md`](docs/TECNICO.md) — pipeline de datos, API de `src/data_loader.py`,
-   esquemas/tamaños por trimestre, gotchas resueltos y convenciones de análisis.
-3. [`.claude/memoria_EPH.md`](.claude/memoria_EPH.md) — diccionario completo de variables
+   esquemas/tamaños por trimestre, gotchas resueltos, convenciones de análisis y detalle de
+   los notebooks 06 (termómetro, §6) y 07 (nowcast, §7).
+3. [`docs/NOWCAST.md`](docs/NOWCAST.md) — rutina del nowcast (07): cuándo correrlo, qué
+   mantener (bono previsional mensual, respaldos), qué revisar, qué hacer cuando sale una EPH.
+4. [`.claude/memoria_EPH.md`](.claude/memoria_EPH.md) — diccionario completo de variables
    (hogar y personas), claves de vínculo, ponderadores y quiebre de esquema 4T2023.
    Consultar antes de tocar cualquier notebook de análisis.
 
-## Estado (2026-10-06)
+## Estado (2026-10-21)
 
-7 notebooks (00 compilador + 01 demografía, 02 laboral, 03 ingresos, 04 vivienda,
-05 educación, 06 termómetro 0-100) con **37 trimestres T1-2017 → T1-2026**, validados en
-Colab. El 06 pasó a la **v4** (4 dimensiones con ingresos reales deflactados por IPC,
-intervalos de confianza bootstrap), validada en Colab (idéntica a la corrida local con
-`tools/probar_06_local.py`). Pendientes e ideas en el HANDOFF de la memoria.
-**2026-10-20:** nuevo `07_nowcast` (prototipo, solo dimensión D): proyecta los ingresos reales
-antes de la EPH por microsimulación (`src/nowcast.py`), con backtest y registro de versiones.
-Validado en Colab el 2026-10-21 (idéntico a la corrida local).
-**2026-10-21 (tarde):** el 07 proyecta ahora el termómetro completo (A, B y C por ecuaciones puente);
-validado en Colab el mismo día (idéntico a la corrida local). Requiere correr antes el 06 (toma de su CSV A, B y C).
-Datos: `.zip` del INDEC en Google Drive (`carga_EPH`), compilados a parquets por
-trimestre en `carga_EPH/processed`. Los datos NO están en el repo: viven en el Drive del
+8 notebooks: 00 compilador + 01 demografía, 02 laboral, 03 ingresos, 04 vivienda, 05 educación,
+06 termómetro 0-100 (v4) y **07 nowcast del termómetro** (D por microsimulación, A, B y C por
+ecuaciones puente; backtest, robustez y registro de versiones), con **37 trimestres T1-2017 →
+T1-2026**. 00-06 validados en Colab; el 07 validado en Colab hasta el termómetro completo
+(2026-10-21). La sección 7 del 07 (robustez) y el gráfico `nowcast_05_evolucion` están probados
+en la PC; **falta correrlos en Colab**. El T2-2026 de la EPH todavía no estaba publicado.
+Pendientes en el HANDOFF de la memoria.
+
+Datos: `.zip` del INDEC en Google Drive (`carga_EPH`), compilados a parquets por trimestre en
+`carga_EPH/processed`; salidas en `carga_EPH/resultados/` (06) y `carga_EPH/resultados/nowcast/`
+(07, incluido el registro de versiones). Los datos NO están en el repo: viven en el Drive del
 usuario; el código corre en Colab, así que cambiar de PC solo requiere clonar el repo.
 
 ## Reglas
@@ -34,17 +36,23 @@ usuario; el código corre en Colab, así que cambiar de PC solo requiere clonar 
   Santiago Riverti (`santiagoriverti`).
 - Los cambios de código solo llegan a Colab tras `git push` a `main` (los notebooks
   clonan el repo público).
-- Las bases pesadas de EPH no se commitean (`data/raw/*.zip` ignorado).
+- Las bases pesadas de EPH no se commitean (`data/raw/*.zip` y `data/processed/*` ignorados).
 - Actualizar `.claude/memoria.md` (HANDOFF + historial) al finalizar cada sesión.
 - Editar notebooks vía JSON (`json.load`/`json.dump`), no con `sed` sobre el `.ipynb`.
 - **El notebook 06 se genera** con `tools/gen_06_termometro.py`: editar el script y
   regenerar (`python tools/gen_06_termometro.py`), nunca el `.ipynb` directo.
 - **El notebook 07 se genera** con `tools/gen_07_nowcast.py`; su lógica vive en `src/nowcast.py`
   (las fórmulas de D, `DIMENSIONES` y la normalización son copias de las del 06; A, B y C se leen
-  del CSV del 06: si cambia el 06, cambiar las dos y verificar con el control de la sección 3 del 07). Probar con `tools/probar_07_local.py`
-  después de correr el 06. Ver `docs/TECNICO.md` §7.
+  del CSV del 06: si cambia el 06, cambiar las dos y verificar con el control de la sección 3
+  del 07). Orden: correr el 06 antes que el 07. Si cambia el método del nowcast, cambiar
+  `VERSION` en el generador. Ver `docs/TECNICO.md` §7 y `docs/NOWCAST.md`.
 - No hay datos EPH en el repo. En la PC se pueden tener los datos reales:
   `python tools/probar_06_local.py --descargar` baja los zips del INDEC a `data/raw/`, compila
-  a `data/processed/` (ambos ignorados) y corre el 06. Para los demás notebooks, Colab sigue
-  siendo la referencia (el usuario pega las salidas en el chat).
-- En Windows, evitar heredocs largos con backticks en bash: escribir scripts a archivo.
+  a `data/processed/` (ambos ignorados) y corre el 06; `python tools/probar_07_local.py` corre
+  el 07 (~5 min). Para los demás notebooks, Colab sigue siendo la referencia (el usuario pega las
+  salidas en el chat). Validar en Colab = comparar los CSV que el usuario baja de Drive contra
+  los de `data/processed/resultados_06/` (deben coincidir salvo redondeo ~1e-10).
+- El registro de versiones del nowcast (`carga_EPH/resultados/nowcast/registro_versiones.csv`,
+  en Drive) es el único estado que no se puede regenerar: no borrarlo.
+- En Windows, evitar heredocs largos con backticks en bash: escribir scripts a archivo. Usar
+  `PYTHONUTF8=1` o `python -X utf8` (`python -I` ignora `PYTHONUTF8`).

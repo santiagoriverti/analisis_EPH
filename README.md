@@ -25,14 +25,21 @@ Como alternativa (o complemento), también se pueden colocar `.zip` o `.txt` sue
 
 ```
 analisis_EPH/
-├── notebooks/        # Notebooks de análisis (Colab)
+├── notebooks/                 # Notebooks de análisis (Colab): 00-07
 ├── data/
-│   ├── raw/          # Bases EPH descargadas manualmente (txt/xls del INDEC)
-│   └── processed/    # Datasets intermedios/limpios generados por los notebooks
-├── src/              # Funciones compartidas (carga de datos, armonización, utils)
-├── tools/            # Generadores de los notebooks 06 y 07 (gen_06/gen_07) y pruebas locales
-├── docs/             # Documentación técnica (TECNICO.md)
-└── .claude/          # Memoria/contexto del proyecto para sesiones de Claude Code
+│   ├── raw/                   # Zips del INDEC (ignorado por git; probar_06_local --descargar)
+│   ├── processed/             # Parquets y salidas locales (ignorado por git)
+│   ├── ipc_nacional.csv       # Respaldo del IPC nacional (06)
+│   ├── series_nowcast.csv     # Respaldo de las series de datos.gob.ar del nowcast (07)
+│   └── bono_previsional.csv   # Bono previsional mensual, carga manual (07)
+├── src/
+│   ├── data_loader.py         # Carga y compilación de las bases EPH
+│   └── nowcast.py             # Lógica del nowcast del termómetro (07)
+├── tools/                     # Generadores de los notebooks 06 y 07 (gen_06/gen_07) y pruebas locales
+├── docs/
+│   ├── TECNICO.md             # Documentación técnica
+│   └── NOWCAST.md             # Rutina del nowcast: cuándo correrlo, qué mantener, qué revisar
+└── .claude/                   # Memoria/contexto del proyecto para sesiones de Claude Code
 ```
 
 ## Notebooks
@@ -53,7 +60,8 @@ y unir las bases de nuevo.
 | `06_termometro.ipynb` | **Termómetro de la economía de los hogares**: índice de malestar 0-100 (cantidad de empleo y despidos, calidad del empleo, estrategias de supervivencia de los hogares, ingresos reales) con intervalos de confianza: lectura automática del último trimestre, evolución, mapa de calor, promedios anuales, controles de calidad y exportación a Drive | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/06_termometro.ipynb) |
 | `07_nowcast.ipynb` | **Nowcast del termómetro**: proyecta las cuatro dimensiones antes de que salga la EPH (D por microsimulación sobre la última base con salarios, haberes, AUH e IPC; A, B y C con ecuaciones puente sobre EMAE, empleo registrado SIPA y confianza del consumidor), backtest en pseudo tiempo real y registro de versiones que mide el error cuando llega la EPH oficial | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/07_nowcast.ipynb) |
 
-**Cobertura actual:** 37 trimestres, **T1-2017 → T1-2026** (todos los notebooks validados en Colab).
+**Cobertura actual:** 37 trimestres, **T1-2017 → T1-2026** (00-06 validados en Colab; el 07
+validado en Colab salvo su sección de robustez y el gráfico de evolución, agregados el 2026-10-21).
 
 ### Qué hace el notebook 00 (compilación)
 
@@ -85,7 +93,8 @@ df = load_panel(columns=["CH06", "CH04", "REGION", "PONDERA"])  # ej. demografí
 3. Volver a correr `notebooks/00_preparacion_bases.ipynb`: detecta automáticamente
    todos los trimestres presentes en `carga_EPH` y compila solo el nuevo; no hace falta
    editar nada en el código.
-4. Recién después re-correr los notebooks 01-06: toman el último trimestre solos.
+4. Recién después re-correr los notebooks 01-06 (toman el último trimestre solos) y por último
+   el 07, que completa el error de las proyecciones de ese trimestre en el registro de versiones.
    (Si se corren antes del 00, fallan porque el parquet del trimestre nuevo no existe.)
 
 ## Termómetro de la economía de los hogares (notebook 06)
@@ -163,11 +172,19 @@ fecha, indicador por indicador, y los pasa por la misma normalización del 06:
   confianza del consumidor de la UTDT (bienes durables), que sale en el mismo mes.
 
 Cuando sale la EPH, el trimestre pasa a oficial y cada versión guardada en el **registro de
-versiones** (`carga_EPH/resultados/nowcast/`) recibe su error.
+versiones** (`carga_EPH/resultados/nowcast/registro_versiones.csv`, en Drive) recibe su error.
+
+**Qué muestra el notebook:** series usadas y su último dato; control contra el 06; qué movió la
+proyección; backtest en pseudo tiempo real; el nowcast de cada trimestre sin EPH con su intervalo
+y la comparación interanual; robustez; registro de versiones. **Gráficos** (en
+`nowcast/graficos/`): evolución del termómetro con la proyección (`nowcast_05_evolucion`), el
+nowcast por dimensión (`nowcast_03_hoy`), error según la fecha de la proyección
+(`nowcast_01_error_por_horizonte`), backtest (`nowcast_02_backtest`) y versiones de cada trimestre
+(`nowcast_04_versiones`).
 
 **Backtest (2019-2026, sin pandemia, RMSE):** con la EPH del trimestre anterior, el termómetro
 proyectado erra 4,1 pts contra 7,2 de repetir el último publicado (el ruido muestral de la EPH es
-~3,6); si la EPH se demora dos o tres trimestres, 7-9 contra 12-15. Por dimensión, la ganancia
+~3,6); si la EPH se demora uno o dos trimestres, 7-9 contra 12-15. Por dimensión, la ganancia
 está en D (9,5 vs 14,8) y en A; B y C casi no se pueden anticipar. Parte de la mejora del
 termómetro a un trimestre viene de errores de B que compensan los de A y C, así que lo esperable
 es algo peor (entre 4,1 y 5,5).
@@ -183,7 +200,9 @@ de 7,1 a 4,1 a medida que llegan datos) y dependencia de cada predictor (sin el 
 es sobre todo estacional; contra el mismo trimestre de 2025: +12,0, +12,5 y +4,6 pts.
 
 Generado con `python tools/gen_07_nowcast.py`; prueba local `python tools/probar_07_local.py`
-(después del 06). Detalle en [`docs/TECNICO.md`](docs/TECNICO.md) §7.
+(después del 06; ~5 min). Rutina (cuándo correrlo, mantenimiento mensual del bono previsional, qué
+revisar, qué hacer cuando sale una EPH): [`docs/NOWCAST.md`](docs/NOWCAST.md). Detalle técnico:
+[`docs/TECNICO.md`](docs/TECNICO.md) §7.
 
 ## Continuar en otra PC
 
@@ -197,10 +216,13 @@ corren en Colab, así que en una PC nueva alcanza con:
 2. Configurar git con el usuario propio (`git config user.name "Santiago Riverti"`) y
    credenciales de GitHub (Git Credential Manager o `gh auth login`) para poder pushear.
 3. Para trabajar con Claude Code: abrir la carpeta del repo; `CLAUDE.md` indica leer
-   `.claude/memoria.md` (estado/pendientes), `docs/TECNICO.md` y `.claude/memoria_EPH.md`.
+   `.claude/memoria.md` (estado/pendientes, empezando por el HANDOFF), `docs/TECNICO.md`,
+   `docs/NOWCAST.md` y `.claude/memoria_EPH.md`.
 4. Para ejecutar: abrir cualquier notebook con su badge de Colab (usa la cuenta de Google
    que tiene la carpeta `carga_EPH`). Los cambios de código deben estar pusheados a
-   `main` para que Colab los vea.
+   `main` para que Colab los vea. Todo el estado que no está en el repo vive en Drive: los zips
+   y parquets (`carga_EPH/`, `carga_EPH/processed/`) y las salidas (`carga_EPH/resultados/`,
+   incluido el registro de versiones del nowcast, que no se puede regenerar).
 
 ### Setup local (opcional)
 
@@ -216,7 +238,9 @@ parquets en `data/processed/` (ignorado por git) y corre el notebook 06 completo
 ## Documentación técnica
 
 Ver [`docs/TECNICO.md`](docs/TECNICO.md): flujo de datos, funciones de
-`src/data_loader.py`, esquemas por trimestre, gotchas resueltos y convenciones de análisis.
+`src/data_loader.py`, esquemas por trimestre, gotchas resueltos, convenciones de análisis y el
+detalle de los notebooks 06 (termómetro) y 07 (nowcast, `src/nowcast.py`). La rutina del
+nowcast está en [`docs/NOWCAST.md`](docs/NOWCAST.md).
 
 ## Diccionario de datos
 

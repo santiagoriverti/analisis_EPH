@@ -406,6 +406,55 @@ if OBJ_HOY:
     display(tabla_ind.round(1))
 ''')
 
+md("""
+**Evolución del termómetro y su proyección.** La serie de la EPH es la del 06, con su intervalo de
+confianza muestral (banda gris) y la media móvil de 4 trimestres; los trimestres sin EPH
+(fondo gris) muestran la proyección con su intervalo del 95% (error del backtest) y la media
+móvil que resulta de sumarla.
+""")
+
+code(r'''
+proy_t = nuevas[nuevas["indicador"] == nc.TERMO].set_index("trimestre").reindex(OBJ_HOY)
+etiquetas = list(T_hoy.index) + OBJ_HOY
+x_of, x_nc = np.arange(len(T_hoy)), np.arange(len(T_hoy), len(etiquetas))
+serie_of = T_hoy[nc.TERMO]
+ic_of = d06.loc[T_hoy.index, ["Termómetro IC inf", "Termómetro IC sup"]].astype(float)  # IC bootstrap del 06
+mm = pd.concat([serie_of, proy_t["valor"]]).rolling(4).mean()  # media móvil 4T (con la proyección al final)
+COLOR_PROY = "#2a78d6"
+
+fig, ax = plt.subplots(figsize=(13, 5.8))
+for (lo, hi, col), nombre in zip(FRANJAS, ["Templado", "Tibio", "Fiebre"]):
+    ax.axhspan(lo, hi, color=col, alpha=0.08, lw=0, zorder=0)
+    ax.text(len(etiquetas) - 0.3, (lo + hi) / 2, nombre, va="center", ha="left", color="#52514e")
+ax.fill_between(x_of, ic_of.iloc[:, 0], ic_of.iloc[:, 1], color=GRIS, alpha=0.18, lw=0, label="IC 95% (muestra de la EPH)")
+ax.plot(x_of, serie_of, color=GRIS, lw=1.5, marker="o", ms=4, label="Trimestral (EPH)")
+ax.plot(x_of, mm.iloc[:len(x_of)], color=TINTA, lw=2.5, label="Media móvil 4T")
+ax.annotate(f"{ULTIMO}: {f1(serie_of.iloc[-1])}", (x_of[-1], serie_of.iloc[-1]), xytext=(-6, 14),
+            textcoords="offset points", ha="right", color=TINTA, fontsize=9)
+if OBJ_HOY:
+    ax.axvspan(x_nc[0] - 0.5, x_nc[-1] + 0.5, color="#e4e3df", alpha=0.7, lw=0, zorder=0)
+    ax.text(x_nc.mean(), 98, "sin EPH", ha="center", va="top", color="#52514e", fontsize=9)
+    ax.plot(np.r_[x_of[-1], x_nc], np.r_[serie_of.iloc[-1], proy_t["valor"]], ls=":", color=COLOR_PROY, lw=1.5)
+    ax.plot(np.arange(len(x_of) - 1, len(etiquetas)), mm.iloc[len(x_of) - 1:], color=TINTA, lw=2.5, ls="--",
+            label="Media móvil 4T con la proyección")
+    ax.errorbar(x_nc, proy_t["valor"], yerr=[proy_t["valor"] - proy_t["ic_inf"], proy_t["ic_sup"] - proy_t["valor"]],
+                fmt="o", color=COLOR_PROY, mfc="white", mew=2, ms=7, capsize=4, lw=1.5,
+                label="Proyección (IC 95% del backtest)", zorder=5)
+    for xi, (q, f) in zip(x_nc, proy_t.iterrows()):
+        ax.annotate(f1(f["valor"]), (xi, f["ic_sup"]), xytext=(0, 4), textcoords="offset points", ha="center",
+                    color=COLOR_PROY, fontsize=9)
+ax.set_xticks(np.arange(len(etiquetas)), etiquetas, rotation=90, fontsize=8)
+ax.set_xlim(-0.5, len(etiquetas) + 1.5)
+ax.set_ylim(0, 100)
+ax.set_ylabel("Termómetro (0 = mejor, 100 = peor)")
+ax.set_title(f"Termómetro de la economía de los hogares: EPH hasta {ULTIMO}"
+             + (f" y proyección al {FECHA_CORRIDA:%d/%m/%Y}" if OBJ_HOY else ""))
+ax.legend(loc="upper left", frameon=False, fontsize=9)
+plt.tight_layout()
+guardar_figura(fig, "nowcast_05_evolucion")
+plt.show()
+''')
+
 code(r'''
 if OBJ_HOY:
     etiquetas = list(T_hoy.index) + OBJ_HOY
@@ -534,8 +583,9 @@ En `carga_EPH/resultados/nowcast/` (separador `;` y decimal `,`, como el 06):
 del backtest, en formato largo: una fila por trimestre, horizonte y serie) y
 `backtest_termometro_resumen.csv` (errores por horizonte y serie) y `robustez_termometro.md` (la
 lectura de la sección 7). El registro de versiones usa
-formato estándar (coma y punto) porque lo relee el notebook. Los gráficos `nowcast_01` …
-`nowcast_04` quedan en `nowcast/graficos/`.
+formato estándar (coma y punto) porque lo relee el notebook. Los gráficos quedan en
+`nowcast/graficos/`: `nowcast_01_error_por_horizonte`, `nowcast_02_backtest`, `nowcast_03_hoy`,
+`nowcast_04_versiones` y `nowcast_05_evolucion`.
 """)
 
 code(r'''

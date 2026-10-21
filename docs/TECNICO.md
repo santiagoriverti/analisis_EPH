@@ -2,7 +2,8 @@
 
 Referencia técnica del pipeline de datos y de los notebooks. Estado del proyecto y
 próximos pasos: [`.claude/memoria.md`](../.claude/memoria.md). Diccionario de variables:
-[`.claude/memoria_EPH.md`](../.claude/memoria_EPH.md).
+[`.claude/memoria_EPH.md`](../.claude/memoria_EPH.md). Rutina del nowcast (cuándo correrlo, qué
+mantener, qué revisar): [`NOWCAST.md`](NOWCAST.md).
 
 ## 1. Flujo de datos
 
@@ -14,20 +15,27 @@ EPH_usu_<Q>_Trim_<YYYY>_txt.zip  ──►   carga_EPH/*.zip
                                               ▼
                                        carga_EPH/processed/eph_T<Q><YY>.parquet
                                               │  (1 parquet por trimestre)
-                   01-05: copia a /content/processed_local (shutil.copy)
+                   01-07: copia a /content/processed_local (shutil.copy)
                                               ▼
                               load_panel(columns=[...], quarters=[...])
+                                              │
+              06_termometro ──► carga_EPH/resultados/termometro_EPH.csv (+ anual, resumen, graficos/)
+                                              │  (A, B y C del termómetro)
+              07_nowcast  ──► carga_EPH/resultados/nowcast/ (registro_versiones.csv, nowcast, backtest,
+                              robustez, graficos/)  + series de datos.gob.ar
 ```
 
 - Rutas en Colab: `DRIVE_DIR = /content/drive/MyDrive/carga_EPH`,
   `DRIVE_PROCESSED = /content/drive/MyDrive/carga_EPH/processed`,
-  `PROCESSED_DIR` (01-05) = `/content/processed_local`.
+  `PROCESSED_DIR` (01-07) = `/content/processed_local`; `RESULTADOS_DIR` (06-07) =
+  `/content/drive/MyDrive/carga_EPH/resultados`.
 - Cada notebook clona (o hace `git pull` de) este repo en `/content/analisis_EPH` para
   importar `src/data_loader.py`. **Los cambios de código solo llegan a Colab después
   de pushearlos a `main`.**
 - Alternativa local: poner `.zip`/`.txt` en `data/raw/` y usar `out_dir` por defecto
   (`data/processed/`). `tools/probar_06_local.py --descargar` baja los zips del sitio del
-  INDEC, compila y corre el notebook 06 completo (ver §6, "Probar en la PC").
+  INDEC, compila y corre el notebook 06 completo (ver §6, "Probar en la PC");
+  `tools/probar_07_local.py` corre el 07 (§7).
 
 ## 2. `src/data_loader.py`
 
@@ -220,12 +228,10 @@ Piezas de `src/nowcast.py`:
   RMSE sin 2020T2-2021T1. Limitación: usa las series actuales, no las versiones de cada momento.
 - **Deriva (`estimar_deriva`, `aplicar_deriva`)**: corrige el sesgo con los últimos errores a k=1 ya
   conocidos. Probado con ventanas 4, 8, 12 y todos: baja el sesgo de D pero no el error cuadrático
-  y empeora el ingreso laboral → `CORREGIR_DERIVA = False` en el notebook.
-- **Bandas**: `error_esperado(res, k, días)` → ±1,96 × RMSE del horizonte más parecido del backtest.
-- **Registro (`filas_registro`, `registrar`, `conciliar`)**: `nowcast/registro_versiones.csv`,
-  formato CSV estándar. Clave (`fecha_corrida`, `version`, `trimestre`, `indicador`): una corrida
-  del mismo día reemplaza a la anterior. `conciliar` completa `oficial` (para D, `D_tiempo_real`) y
-  `error` = proyectado − oficial cuando el trimestre ya tiene EPH.
+  y empeora el ingreso laboral → no se usa; el 07 la muestra solo como alternativa (sección 5).
+- **Funciones solo de D** (`backtest`, `resumir`, `error_esperado`): quedan para comparar los métodos
+  de D (sección 5 del 07, "Alternativas"); el nowcast usa las del termómetro completo (abajo).
+- **Registro (`registrar`, `conciliar`)**: ver "A, B y C" abajo (`filas_registro` es general).
 
 **Resultados del backtest (2026-10-20, 25 trimestres sin pandemia):**
 
@@ -269,8 +275,27 @@ ingreso laboral puede mover D ~10 pts si cae en una zona densa de la historia.
   preparadas una vez; los 15 se agregan a la historia y pasan por `termometro`. Backtest:
   `backtest_termometro` (formato largo, una fila por objetivo, horizonte y serie) y
   `resumir_termometro`; bandas: `error_esperado_serie` (RMSE de cada serie en el horizonte más
-  parecido). Registro: `filas_registro` (una fila por serie: termómetro, dimensiones, 15
-  indicadores) y `conciliar(reg, oficiales, termometro_tiempo_real(...))`.
+  parecido). Registro (`nowcast/registro_versiones.csv`, CSV estándar): `filas_registro` (una fila
+  por serie: termómetro, dimensiones y 15 indicadores, con IC ±1,96 × RMSE acotados a 0-100 / ≥ 0),
+  `registrar` (clave `fecha_corrida`, `version`, `trimestre`, `indicador`: una corrida del mismo día
+  y versión reemplaza a la anterior) y `conciliar(reg, oficiales, termometro_tiempo_real(...))`
+  (completa `oficial` y `error` = proyectado − oficial cuando el trimestre ya tiene EPH; acepta las
+  filas viejas de la versión `D-microsim v1`).
+
+**Estructura del notebook 07** (9 secciones + anexo; versión `VERSION = "termómetro v1"`):
+
+| # | Sección | Contenido |
+|---|---|---|
+| 1 | Setup | clona/actualiza repo, monta Drive, copia parquets, `RESULTADOS_DIR`; imports (`importlib.reload(nc)`), paleta del 06, `NOWCAST_DIR`, `guardar_figura`, `FECHA_CORRIDA` (hoy), `VERSION`, `SERIES_T` |
+| 2 | Series | `cargar_series` (API → CSV de la distribución → respaldo del repo) y tabla con origen y último mes de cada una |
+| 3 | Oficiales | `cargar_bases` (microdatos + D), `leer_oficiales` (A, B y C del CSV del 06), `T_rt`, `T_hoy`; control contra el 06 (✓ si dif. < 1e-6) y aviso si hay microdatos que el 06 no procesó |
+| 4 | Qué mueve la proyección | `variaciones` (índices de D) y `variaciones_abc` (predictores) entre la última EPH y el trimestre más lejano |
+| 5 | Backtest | `backtest_termometro` + `resumir_termometro` (grilla completa), lectura, tabla por indicador, alternativas (A, B y C con persistencia; D "anual" y con corrección de sesgo), gráficos `nowcast_01_error_por_horizonte` y `nowcast_02_backtest` |
+| 6 | Nowcast hoy | `proyectar_termometro` para cada trimestre sin EPH (por separado), bandas `error_esperado_serie`, tabla con IC, lectura interanual, tabla de indicadores, gráficos `nowcast_05_evolucion` (serie del 06 con su IC y media móvil 4T + proyección) y `nowcast_03_hoy` (termómetro y dimensiones) |
+| 7 | Robustez | `robustez_subperiodos`, `robustez_calibracion`, `convergencia`, `dependencia_predictores`, `alertas_robustez` |
+| 8 | Registro | `registrar` + `conciliar`, errores de las versiones con EPH, gráfico `nowcast_04_versiones` |
+| 9 | Exportar | `nowcast_termometro.csv`, `backtest_termometro.csv`, `backtest_termometro_resumen.csv` (`;` y `,`), `robustez_termometro.md`; lista los PNG |
+| Anexo | Decisiones y pruebas | evidencia de cada decisión de D y de A, B y C |
 
 **Resultados del backtest del termómetro (2026-10-21, 25 trimestres sin pandemia, RMSE en pts):**
 
@@ -326,8 +351,12 @@ crítico si sacarlo sube el error > 20% en algún horizonte. Resultados al 2026-
 
 - Colab: no requiere instalar nada extra (pandas, pyarrow, matplotlib, seaborn vienen).
 - Local: `pip install -r requirements.txt` (pandas, numpy, matplotlib, seaborn, pyarrow,
-  jupyter). Python ≥ 3.10 (se usan type hints `tuple[int, int] | None`).
-- Prueba completa del 06 con datos reales: `python tools/probar_06_local.py --descargar`.
+  jupyter, requests). Python ≥ 3.10 (se usan type hints `tuple[int, int] | None`); probado con 3.14.
+- Prueba completa del 06 con datos reales: `python tools/probar_06_local.py --descargar` (~30 s una
+  vez compilado); del 07: `python tools/probar_07_local.py` (~5 min).
+- Windows: `PYTHONUTF8=1` o `python -X utf8` (las salidas usan ✓/⚠/→). `python -I` ignora
+  `PYTHONUTF8`: usar `python -X utf8 -I`. No usar heredocs de bash con backticks para editar
+  archivos: escribir el script a un archivo y correrlo.
 - Chequeo rápido local de un zip nuevo (sin Colab):
 
 ```python
