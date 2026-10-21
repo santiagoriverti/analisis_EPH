@@ -175,7 +175,8 @@ INDEC los zips que falten a `data/raw/`, compila los parquets que falten a `data
 solo la llama y muestra. Probar: `python tools/probar_07_local.py` (correr antes el 06 si cambió:
 el 07 toma de `termometro_EPH.csv` los indicadores de A, B y C y compara contra él D, las
 dimensiones y el termómetro). Salidas en `carga_EPH/resultados/nowcast/` (local:
-`data/processed/resultados_06/nowcast/`). ~2,5 min local (el backtest del termómetro es lo que tarda).
+`data/processed/resultados_06/nowcast/`). ~5 min local (los backtests del termómetro son lo que tarda:
+el principal y los tres sin cada predictor de la sección 7).
 
 **Objetivo:** tener el termómetro antes de que salga la EPH (~85 días después del trimestre),
 corregirlo cuando sale y registrar cada versión. Cada indicador se proyecta en sus unidades (D por
@@ -291,8 +292,35 @@ resto (hasta −19% en asalariados registrados): la ganancia está en el agregad
 
 Nowcast al 21/10/2026 (base 2026T1, termómetro 52,8): 2026T2 = 62,8 (IC 54,5-71,1), 2026T3 = 58,6
 (44,8-72,4), 2026T4 = 54,1 (36,8-71,4). La suba contra T1 es sobre todo estacional (el T2 es peor
-que el T1 en B y C; solo con persistencia daría 61,4); contra el mismo trimestre de 2025: +12,0,
+que el T1 en B y C; solo con persistencia daría 60,3); contra el mismo trimestre de 2025: +12,0,
 +12,5 y +4,6. EMAE cae en jul-2026 (−2,9% mensual) y la tendencia lo arrastra a los meses sin dato.
+
+**Robustez (2026-10-21, sobre el backtest local; sin pandemia).** Se recalcula en cada corrida en la
+sección 7 del 07 (`robustez_subperiodos`, `robustez_calibracion`, `convergencia`,
+`dependencia_predictores` y la lectura ✓/⚠ de `alertas_robustez`, que se exporta a
+`nowcast/robustez_termometro.md`; horizontes en `HORIZONTES_ROBUSTEZ`, versiones en `CALENDARIO`).
+Umbrales de las alertas: sesgo significativo si |sesgo| > 1,96 × su error estándar; intervalos
+angostos si cubren < 85%; el error de las versiones no puede subir más de 0,3 pts; un predictor es
+crítico si sacarlo sube el error > 20% en algún horizonte. Resultados al 2026-10-21:
+- **Sesgo:** ninguno significativo en el termómetro (+0,2 pts a k=1, EE 0,8; +1,3 a k=3, EE 1,8).
+- **Estabilidad:** mejora en los dos subperíodos, pero mucho más en 2023-2026 (k=1: 2,5 vs 7,6 de
+  repetir el último) que en 2019-2022 (5,4 vs 6,8). Le gana a repetir el último en 60-64% de los
+  trimestres. B en 2019-2022 y C a k ≥ 2 en 2019-2022 son peores que repetir el último.
+- **Intervalos de 95%:** cubren el dato oficial en 92% (k=1), 96% (k=2) y 84% (k=3) de los trimestres;
+  con el RMSE que se conocía en cada fecha cubren 100% (conservadores en 2023-2026).
+- **Versiones:** el error baja ordenado a medida que llegan datos (calendario normal: −75 días 7,1;
+  −30 6,7; al cierre, ya con la base nueva, 4,4; +45 4,2; +80 4,1). La corrección grande llega con la
+  EPH nueva (revisión media 4,7 pts); después las revisiones son chicas (1-1,5) y solo ~60% acercan al
+  oficial (el resto es ruido).
+- **Dependencia de una serie:** sin SIPA el error sube a 5,3 / 9,4 / 13,1 (k=1/2/3; con SIPA 4,1 /
+  7,0 / 8,8); sin confianza del consumidor 4,6 / 6,9 / 9,8; sin EMAE 3,9 / 7,6 / 8,5 (el EMAE casi no
+  aporta). El SIPA es el predictor clave y sale con ~100 días.
+- **Nowcast de hoy ante decisiones razonables** (predictores elegidos por indicador, término AR, sacar
+  un predictor, meses sin dato constantes, no registrado corrido 5 meses, D con corrección de sesgo):
+  2026T2 60,8-64,3 (elegido 62,8), T3 55,3-61,4 (58,6), T4 51,2-57,8 (54,1). En todas las variantes los
+  tres quedan por encima del mismo trimestre de 2025 (50,8 / 46,1 / 49,4). Cada trimestre se proyecta
+  por separado: si se agregan a la historia los siguientes trimestres proyectados, su percentil cambia
+  ~1 punto (2026T2: 63,7 en vez de 62,8).
 
 ## 8. Entorno
 

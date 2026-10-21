@@ -70,11 +70,13 @@ dimensiones). Los meses que todavía no se publicaron se completan con la tenden
 **Cómo se corrige cuando sale la EPH:** el trimestre proyectado pasa a oficial, los percentiles
 se recalculan (como en el 06), los coeficientes se reestiman con una observación más y la
 proyección siguiente parte de esa base. Cada corrida se guarda en el **registro de versiones**
-(sección 7): cuando sale la EPH se completa el valor oficial y el error de cada versión.
+(sección 8): cuando sale la EPH se completa el valor oficial y el error de cada versión.
 
 **Qué tan bien anda (sección 5):** se simula el pasado en *pseudo tiempo real* (para cada
 trimestre 2019-2026 se proyecta solo con lo que estaba publicado en cada fecha) y se compara con
-la EPH y con no proyectar (repetir el último termómetro publicado).
+la EPH y con no proyectar (repetir el último termómetro publicado). La **sección 7** chequea la
+robustez de ese resultado en cada corrida (subperíodos, calibración de los intervalos, versiones y
+dependencia de cada predictor).
 
 **Límites:** el error de la proyección incluye el ruido muestral de la EPH que se va a publicar
 (~3,6 pts de termómetro): no puede bajar de ahí. A un trimestre de la base, parte de la mejora del
@@ -84,8 +86,8 @@ anticipar con las series disponibles (sección 5). Las fechas de publicación de
 aproximadas y el backtest usa las series en su versión actual, no las de cada momento.
 
 **Contenido:** 1-2 setup y series · 3 indicadores oficiales (control contra el 06) · 4 qué mueve
-la proyección · 5 backtest · 6 nowcast hoy · 7 registro de versiones · 8 exportar · Anexo:
-decisiones y pruebas.
+la proyección · 5 backtest · 6 nowcast hoy · 7 robustez · 8 registro de versiones · 9 exportar ·
+Anexo: decisiones y pruebas.
 
 **Requisito:** correr antes el 06 (el 07 toma de su CSV los indicadores de A, B y C).
 
@@ -436,7 +438,46 @@ if OBJ_HOY:
 ''')
 
 md("""
-## 7. Registro de versiones
+## 7. Robustez (se recalcula en cada corrida)
+
+Chequeos sobre el backtest de la sección 5 (sin pandemia), para tres horizontes: EPH del
+trimestre anterior (k = 1, 80 días después del cierre) y EPH demorada uno y dos trimestres:
+
+- **Subperíodos:** ¿la ventaja sobre repetir el último se sostiene en 2019-2022 y en 2023-2026?
+- **Calibración:** sesgo (y si es significativo), cuántas veces le gana a repetir el último, peor
+  error y cobertura de los intervalos de 95%: con el error de toda la muestra y con el que se
+  conocía en cada fecha (errores de trimestres ya publicados en la base de la proyección).
+- **Versiones:** con el calendario habitual de la EPH, cuánto erra cada versión de un mismo
+  trimestre, cuánto se revisa y si las revisiones lo acercan al oficial.
+- **Dependencia de cada predictor de A, B y C:** backtest y nowcast de hoy sacando cada serie
+  (recalcula el backtest tres veces más: tarda ~1-2 minutos).
+
+Al final, una lectura automática con ✓ / ⚠ (umbrales en `nc.alertas_robustez`).
+""")
+
+code(r'''
+rob_sub = nc.robustez_subperiodos(bt)
+print("Error (RMSE, pts) por subperíodo:")
+display(rob_sub.round(1))
+rob_cal = nc.robustez_calibracion(bt)
+print("Calibración del termómetro:")
+display(rob_cal.round(1))
+rob_conv, rob_fin = nc.convergencia(bt)
+print("Versiones de un mismo trimestre (calendario habitual):")
+display(rob_conv.round(1))
+print(f"La última versión está más cerca del oficial que la primera en {rob_fin:.0f}% de los trimestres.")
+''')
+
+code(r'''
+rob_dep = nc.dependencia_predictores(bases, oficiales, series, UMBRAL, OBJETIVOS, ULTIMO, OBJ_HOY, resumen_elegido=res)
+print("Termómetro sacando cada predictor (backtest: RMSE en pts; hoy: valor proyectado):")
+display(rob_dep.round(1))
+alertas = nc.alertas_robustez(rob_sub, rob_cal, rob_conv, rob_dep)
+print("\n".join(alertas))
+''')
+
+md("""
+## 8. Registro de versiones
 
 Cada corrida agrega sus proyecciones (termómetro, dimensiones y los 15 indicadores) a
 `carga_EPH/resultados/nowcast/registro_versiones.csv`; una corrida del mismo día y versión
@@ -486,12 +527,13 @@ if len(rt):
 ''')
 
 md("""
-## 8. Exportar
+## 9. Exportar
 
 En `carga_EPH/resultados/nowcast/` (separador `;` y decimal `,`, como el 06):
 `nowcast_termometro.csv` (proyección de esta corrida), `backtest_termometro.csv` (cada proyección
 del backtest, en formato largo: una fila por trimestre, horizonte y serie) y
-`backtest_termometro_resumen.csv` (errores por horizonte y serie). El registro de versiones usa
+`backtest_termometro_resumen.csv` (errores por horizonte y serie) y `robustez_termometro.md` (la
+lectura de la sección 7). El registro de versiones usa
 formato estándar (coma y punto) porque lo relee el notebook. Los gráficos `nowcast_01` …
 `nowcast_04` quedan en `nowcast/graficos/`.
 """)
@@ -505,6 +547,11 @@ for nombre, df in archivos.items():
     path = os.path.join(NOWCAST_DIR, nombre)
     df.to_csv(path, **opts)
     print("Guardado:", path)
+path = os.path.join(NOWCAST_DIR, "robustez_termometro.md")
+with open(path, "w", encoding="utf-8") as fh:
+    fh.write(f"### Robustez del nowcast del termómetro ({FECHA_CORRIDA:%d/%m/%Y}, base EPH {ULTIMO})\n\n"
+             + "\n".join(f"- {a}" for a in alertas) + "\n")
+print("Guardado:", path)
 graficos = sorted(os.listdir(GRAFICOS_DIR)) if os.path.isdir(GRAFICOS_DIR) else []
 print(f"Gráficos en {GRAFICOS_DIR}: " + (", ".join(graficos) if graficos else "ninguno"))
 ''')

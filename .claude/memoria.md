@@ -33,6 +33,13 @@ Qué se hizo (pedido del usuario: "vamos con las dimensiones A, B y C"):
 5. **Nowcast al 21/10/2026:** 2026T2 = 62,8 (IC 54,5-71,1), T3 = 58,6, T4 = 54,1. La suba contra T1
    (52,8) es sobre todo estacional; interanual +12,0, +12,5, +4,6.
 
+6. **Robustez (pedido del usuario, 2026-10-21):** sin sesgo significativo; la ventaja se sostiene en
+   2019-2022 (5,4 vs 6,8) y 2023-2026 (2,5 vs 7,6); le gana a repetir el último en 60-64%; intervalos
+   cubren 92/96/84% (k=1/2/3); versiones convergen (7,1 → 4,1); **depende del SIPA** (sin él, +48%);
+   el EMAE casi no aporta. El nowcast de hoy varía 60,8-64,3 (T2) entre variantes razonables y siempre
+   queda arriba de 2025. Nueva sección 7 del 07 la recalcula en cada corrida (~5 min el notebook).
+   Pusheado a main (2026-10-21); falta correrlo en Colab.
+
 **Pendientes / ideas:**
 1. Cuando salga T2-2026: correr 00, 06 y 07; el registro concilia las versiones D-microsim v1 y
    termómetro v1 del 21/10 (primer error real).

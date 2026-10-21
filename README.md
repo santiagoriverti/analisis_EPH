@@ -172,6 +172,12 @@ está en D (9,5 vs 14,8) y en A; B y C casi no se pueden anticipar. Parte de la 
 termómetro a un trimestre viene de errores de B que compensan los de A y C, así que lo esperable
 es algo peor (entre 4,1 y 5,5).
 
+La **sección 7** del notebook chequea en cada corrida la robustez de ese resultado: subperíodos
+(la ventaja se sostiene en 2019-2022 y 2023-2026, mucho más en el segundo), sesgo (no
+significativo), cobertura de los intervalos (84-96%), convergencia de las versiones (el error baja
+de 7,1 a 4,1 a medida que llegan datos) y dependencia de cada predictor (sin el SIPA el error sube
+~50%: es la serie clave). La lectura queda en `nowcast/robustez_termometro.md`.
+
 **Nowcast al 21/10/2026** (base 2026T1 = 52,8; el T2-2026 todavía no estaba publicado):
 2026T2 = 62,8 (IC 95% 54-71), 2026T3 = 58,6 (45-72), 2026T4 = 54,1 (37-71). La suba contra el T1
 es sobre todo estacional; contra el mismo trimestre de 2025: +12,0, +12,5 y +4,6 pts.

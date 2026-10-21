@@ -762,6 +762,162 @@ def resumir_termometro(bt: pd.DataFrame, sin_pandemia: bool = True) -> pd.DataFr
     return r.sort_index()
 
 
+# --------------------------------------------------------------------------------------------
+# Robustez del backtest
+# --------------------------------------------------------------------------------------------
+HORIZONTES_ROBUSTEZ = [(1, 80), (2, 0), (3, -75)]  # EPH del trimestre anterior; demorada 1 y 2 trimestres
+# Versiones de un mismo trimestre con el calendario habitual de la EPH: antes del cierre la última
+# EPH es la de dos trimestres atrás; desde el cierre, la del trimestre anterior.
+CALENDARIO = [(2, -75), (2, -30), (1, 0), (1, 45), (1, 80)]
+
+
+def _rmse(x) -> float:
+    return float(np.sqrt(np.mean(np.square(x)))) if len(x) else np.nan
+
+
+def _horizonte(k: int, dias: int) -> str:
+    return f"k={k}, {dias:+d} días"
+
+
+def _f(x: float, signo: bool = False) -> str:
+    """Número con 1 decimal y coma decimal (como f1 de los notebooks)."""
+    return (f"{x:+.1f}" if signo else f"{x:.1f}").replace(".", ",").replace("-", "−")
+
+
+def robustez_subperiodos(bt: pd.DataFrame, corte: str = "2023T1", horizontes=HORIZONTES_ROBUSTEZ,
+                         series: list[str] | None = None) -> pd.DataFrame:
+    """RMSE de la proyección y de repetir el último antes y desde `corte` (sin pandemia), por
+    horizonte y serie (por defecto termómetro y dimensiones)."""
+    series = series or [TERMO] + list(DIMENSIONES)
+    d = bt[~bt["trimestre"].isin(PANDEMIA)]
+    antes = f"{d['trimestre'].min()[:4]}-{int(corte[:4]) - 1}"
+    desde = f"{corte[:4]}-{d['trimestre'].max()[:4]}"
+    filas = {}
+    for k, dias in horizontes:
+        for serie in series:
+            x = d[(d["k"] == k) & (d["dias"] == dias) & (d["serie"] == serie)]
+            a, b = x[x["trimestre"] < corte], x[x["trimestre"] >= corte]
+            filas[(_horizonte(k, dias), serie)] = {
+                f"{antes}: proyección": _rmse(a["error"]), f"{antes}: repetir el último": _rmse(a["error_ultimo"]),
+                f"{desde}: proyección": _rmse(b["error"]), f"{desde}: repetir el último": _rmse(b["error_ultimo"]),
+                "Trimestres": f"{len(a)} + {len(b)}"}
+    out = pd.DataFrame(filas).T
+    out.index.names = ["Horizonte", "Serie"]
+    num = [c for c in out.columns if c != "Trimestres"]
+    out[num] = out[num].astype(float)
+    return out
+
+
+def robustez_calibracion(bt: pd.DataFrame, horizontes=HORIZONTES_ROBUSTEZ, serie: str = TERMO,
+                         minimo: int = 6) -> pd.DataFrame:
+    """Por horizonte: cuántas veces le gana a repetir el último, sesgo (y su error estándar), peor error
+    y cobertura de los intervalos de 95% (±1,96 × RMSE): con el RMSE de toda la muestra y con el que se
+    conocía en cada fecha (errores de objetivos ya publicados en la base, al menos `minimo`)."""
+    d = bt[~bt["trimestre"].isin(PANDEMIA) & (bt["serie"] == serie)]
+    filas = {}
+    for k, dias in horizontes:
+        x = d[(d["k"] == k) & (d["dias"] == dias)].sort_values("trimestre")
+        e, r = x["error"], _rmse(x["error"])
+        dentro = [abs(f["error"]) <= 1.96 * _rmse(x.loc[x["trimestre"] <= f["base"], "error"])
+                  for _, f in x.iterrows() if (x["trimestre"] <= f["base"]).sum() >= minimo]
+        peor = x.loc[e.abs().idxmax()]
+        filas[_horizonte(k, dias)] = {
+            "Trimestres": len(x),
+            "Le gana a repetir el último (%)": (e.abs() < x["error_ultimo"].abs()).mean() * 100,
+            "Sesgo (pts)": e.mean(), "Error estándar del sesgo": e.std() / np.sqrt(len(x)),
+            "Peor error (pts)": peor["error"], "Trimestre del peor error": peor["trimestre"],
+            "Cobertura IC 95% (%)": (e.abs() <= 1.96 * r).mean() * 100,
+            "Cobertura en tiempo real (%)": np.mean(dentro) * 100 if dentro else np.nan,
+            "Trimestres en tiempo real": len(dentro)}
+    out = pd.DataFrame(filas).T
+    enteros = ["Trimestres", "Trimestres en tiempo real"]
+    num = [c for c in out.columns if c not in enteros + ["Trimestre del peor error"]]
+    out[num] = out[num].astype(float)
+    out[enteros] = out[enteros].astype(int)
+    return out
+
+
+def convergencia(bt: pd.DataFrame, calendario=CALENDARIO, serie: str = TERMO) -> tuple[pd.DataFrame, float]:
+    """Versiones sucesivas de cada trimestre con el calendario habitual: RMSE de cada versión, revisión
+    media respecto de la anterior y % de revisiones que la acercan al oficial (o la dejan igual). Devuelve
+    también el % de trimestres en que la última versión está más cerca del oficial que la primera."""
+    d = bt[~bt["trimestre"].isin(PANDEMIA) & (bt["serie"] == serie)]
+    etiquetas = [f"{dias:+d} días (base a {k} trim.)" for k, dias in calendario]
+    V = pd.DataFrame({et: d[(d["k"] == k) & (d["dias"] == dias)].set_index("trimestre")["valor"]
+                      for et, (k, dias) in zip(etiquetas, calendario)}).dropna()
+    oficial = d[(d["k"] == calendario[-1][0]) & (d["dias"] == calendario[-1][1])].set_index("trimestre")["oficial"]
+    E = V.sub(oficial.reindex(V.index), axis=0)
+    rev = V.diff(axis=1)
+    acerca = [np.nan] + [((E[c].abs() < E[p].abs()) | (rev[c].abs() < 0.05)).mean() * 100
+                         for p, c in zip(etiquetas[:-1], etiquetas[1:])]
+    tabla = pd.DataFrame({"RMSE (pts)": [_rmse(E[c]) for c in etiquetas],
+                          "Revisión media (pts)": [np.nan] + [rev[c].abs().mean() for c in etiquetas[1:]],
+                          "Revisiones que acercan al oficial (%)": acerca}, index=etiquetas)
+    return tabla, float((E[etiquetas[-1]].abs() < E[etiquetas[0]].abs()).mean() * 100)
+
+
+def dependencia_predictores(bases: dict, oficiales: pd.DataFrame, series: dict, umbral: float, objetivos: list[str],
+                            base_hoy: str, objetivos_hoy: list[str], horizontes=HORIZONTES_ROBUSTEZ,
+                            resumen_elegido: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Termómetro sacando cada predictor de A, B y C (y sin ninguno = persistencia): RMSE del backtest
+    por horizonte y nowcast de hoy de cada trimestre (cada uno proyectado por separado).
+    `resumen_elegido`: `resumir_termometro` del backtest principal (evita recalcular la fila elegida)."""
+    variantes = {"Con los tres (elegido)": PREDICTORES}
+    variantes.update({f"Sin {NOMBRE_PREDICTOR[p]}": {c: [x for x in PREDICTORES[c] if x != p] for c in IND_ABC}
+                      for p in PREDICTORES_ABC})
+    variantes["Sin ninguno (persistencia)"] = {c: [] for c in IND_ABC}
+    filas = {}
+    for nombre, pred in variantes.items():
+        if pred is PREDICTORES and resumen_elegido is not None:
+            r = resumen_elegido
+        else:
+            r = resumir_termometro(backtest_termometro(bases, oficiales, series, umbral, objetivos, list(horizontes),
+                                                       predictores=pred))
+        fila = {f"Backtest {_horizonte(k, dias)}": r.loc[(k, dias, TERMO), "error"] for k, dias in horizontes}
+        for q in objetivos_hoy:
+            fila[f"Hoy: {q}"] = proyectar_termometro(q, base_hoy, bases, oficiales, series, umbral,
+                                                     predictores=pred)[1].loc[q, TERMO]
+        filas[nombre] = fila
+    return pd.DataFrame(filas).T
+
+
+def alertas_robustez(sub: pd.DataFrame, cal: pd.DataFrame, conv: pd.DataFrame, dep: pd.DataFrame) -> list[str]:
+    """Lectura automática con ✓ / ⚠ de los chequeos de robustez del termómetro.
+
+    Umbrales: sesgo significativo si |sesgo| > 1,96 × su error estándar; intervalos angostos si cubren
+    menos de 85%; convergencia si el RMSE no sube entre versiones (tolerancia 0,3 pts); dependencia
+    de un predictor si sacarlo sube el error más de 20% en algún horizonte."""
+    out = []
+    for h, f in cal.iterrows():
+        sesgo_ok = abs(f["Sesgo (pts)"]) <= 1.96 * f["Error estándar del sesgo"]
+        out.append(f"{'✓' if sesgo_ok else '⚠'} {h}: sesgo {_f(f['Sesgo (pts)'], True)} pts "
+                   f"({'no significativo' if sesgo_ok else 'significativo'}); le gana a repetir el último en "
+                   f"{f['Le gana a repetir el último (%)']:.0f}% de los trimestres")
+        cob = f["Cobertura IC 95% (%)"]
+        out.append(f"{'✓' if cob >= 85 else '⚠'} {h}: los intervalos de 95% cubren el oficial en {cob:.0f}% de los "
+                   f"trimestres{'' if cob >= 85 else ' (angostos)'} y en {f['Cobertura en tiempo real (%)']:.0f}% con el "
+                   "error conocido en cada fecha")
+    cols = list(sub.columns)
+    for h in sub.index.get_level_values("Horizonte").unique():
+        f = sub.loc[(h, TERMO)]
+        ok = f[cols[0]] < f[cols[1]] and f[cols[2]] < f[cols[3]]
+        detalle = (f"{cols[0].split(':')[0]}: {_f(f[cols[0]])} vs {_f(f[cols[1]])}; "
+                   f"{cols[2].split(':')[0]}: {_f(f[cols[2]])} vs {_f(f[cols[3]])}")
+        out.append(f"✓ {h}: el termómetro proyectado le gana a repetir el último en los dos subperíodos ({detalle})"
+                   if ok else f"⚠ {h}: en algún subperíodo no le gana a repetir el último ({detalle})")
+    r = conv["RMSE (pts)"].to_numpy()
+    mono = bool(np.all(np.diff(r) <= 0.3))
+    out.append(f"{'✓' if mono else '⚠'} Versiones: el error {'baja' if mono else 'no baja siempre'} a medida que llegan "
+               f"datos ({' → '.join(_f(x) for x in r)})")
+    base = dep.loc["Con los tres (elegido)"]
+    bt_cols = [c for c in dep.columns if c.startswith("Backtest")]
+    for nombre, f in dep.drop(index=["Con los tres (elegido)", "Sin ninguno (persistencia)"]).iterrows():
+        suba = max((f[c] / base[c] - 1) * 100 for c in bt_cols)
+        out.append(f"{'⚠' if suba > 20 else '✓'} {nombre}: el error sube hasta {suba:+.0f}%"
+                   + (" -> la proyección depende de esa serie" if suba > 20 else ""))
+    return out
+
+
 def error_esperado_serie(resumen: pd.DataFrame, k: int, dias: int) -> tuple[pd.Series, tuple[int, int]]:
     """RMSE del backtest del termómetro (`resumir_termometro`) de cada serie para el horizonte más
     parecido: el mismo k (o el más cercano) y los días más cercanos. Devuelve (RMSE por serie, (k, días))."""
