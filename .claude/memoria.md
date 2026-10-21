@@ -4,11 +4,51 @@
 > bloque **HANDOFF**. Detalle técnico en [`docs/TECNICO.md`](../docs/TECNICO.md);
 > diccionario de variables en [`memoria_EPH.md`](memoria_EPH.md).
 
-## ⭐ HANDOFF (última sesión: 2026-10-06)
+## ⭐ HANDOFF (última sesión: 2026-10-20)
 
-**Estado: termómetro v4 validado en Colab (2026-10-06): el CSV exportado en Colab es idéntico
+**Estado: nuevo notebook `07_nowcast` (prototipo, solo dimensión D), probado en la PC con datos
+reales y pusheado a `main` (2026-10-21); falta correrlo en Colab.** El termómetro v4 (06) sigue
+validado y sin cambios. Datos al día con T1-2026: **el T2-2026 seguía sin publicarse el
+2026-10-20** (la URL habitual del INDEC devuelve HTML; normalmente sale ~85 días después del
+trimestre: revisar si cambió el nombre del archivo).
+
+Qué se hizo en la sesión 2026-10-20 (pedido del usuario: termómetro con frecuencia mensual o
+semanal, proyectado y corregido cuando sale la EPH; se arrancó por D):
+1. **Vara:** repetir el último dato erra 8,4 pts de termómetro (RMSE; dimensiones 13-16); el
+   ruido muestral es 3,6. Plan acordado: proyectar los indicadores (no el índice) y pasarlos por
+   la normalización del 06; D por microsimulación, A/B con series de empleo (SIPA, EMAE, EIL),
+   C con confianza del consumidor/BCRA; serie mensual = trimestre móvil (Chow-Lin); semanal solo
+   como frecuencia de actualización, no como serie.
+2. **`src/nowcast.py` + `tools/gen_07_nowcast.py` + `tools/probar_07_local.py`** (detalle en
+   `docs/TECNICO.md` §7): series de datos.gob.ar con respaldo `data/series_nowcast.csv`, bono en
+   `data/bono_previsional.csv` (copia de IPC_jubilados), microsimulación por clase de ingreso,
+   backtest en pseudo tiempo real, registro de versiones con conciliación. `probar_06_local.py`
+   ahora acepta el nombre del notebook (`correr_notebook(nombre)`).
+3. **Resultados:** indicadores oficiales idénticos al 06 (dif. < 1e-6). Backtest 2019-2026 sin
+   pandemia: D 9,5 pts vs 14,8 de repetir el último (k=1, 80 días); ingreso laboral 3,5% vs 6,4%;
+   ingreso bajo 1,8 vs 3,3 pp. Con la EPH demorada (k=2-3) 12-20 vs 22-26. Sesgo pesimista
+   (+2,7 a k=1). Nowcast al 20/10/2026 (base 2026T1, D 31,9): 2026T2 = 35,1 (IC 17-53), T3 = 31,6
+   (3-60), T4 = 24,4 (0-63).
+4. **Descartado con evidencia:** base = mismo trimestre del año anterior (erra el doble);
+   corrección de sesgo con errores pasados (no baja el RMSE); no registrado siguiendo la tendencia
+   estimada del privado (peor); RIPTE (la API lo devuelve vacío).
+
+**Pendientes / ideas (nuevos):**
+1. **Correr el 07 en Colab** (después del 06) y comparar con la corrida local
+   (el registro de Colab arranca vacío: su primera versión será la de esa fecha).
+2. Cuando salga T2-2026: correr 00, 06 y 07; el 07 concilia solo la versión del 20/10 (primer error real).
+3. Sumar A y B (SIPA asalariados `151.1_AARIADOTAC_2012_M_26`, EMAE `143.3_NO_PR_2004_A_31`, EIL) y C
+   (confianza del consumidor UTDT, morosidad de familias BCRA); después la serie mensual (Chow-Lin)
+   y el termómetro proyectado completo.
+4. Revisar la corrección de sesgo cuando el registro tenga errores reales; mantener al día
+   `data/bono_previsional.csv` (en los dos repos) y de vez en cuando `nc.actualizar_respaldo`.
+
+### Sesión anterior (2026-10-06)
+
+**Termómetro v4 validado en Colab (2026-10-06): el CSV exportado en Colab es idéntico
 al de la corrida local (diferencia máxima 0,0 en las 56 columnas, bootstrap incluido por la
-semilla fija), IPC por API, controles de la sección 13 todos ✓.** Datos al día con T1-2026 (37 trimestres, T1-2017 → T1-2026). T2-2026 todavía no
+semilla fija), IPC por API, controles de la sección 13 todos ✓.**
+Datos al día con T1-2026 (37 trimestres, T1-2017 → T1-2026). T2-2026 todavía no
 estaba publicado el 2026-10-06 (la URL del INDEC devuelve una página HTML).
 
 Qué se hizo en la sesión 2026-10-06:
@@ -40,7 +80,7 @@ Qué se hizo en la sesión 2026-10-06:
    (150 dpi) en `carga_EPH/resultados/graficos/` (`01_termometro_hoy` … `05_promedios_anuales`,
    `anexoA_candidatas` si hay candidatas); se sobrescriben en cada corrida, como los CSV.
 
-**Pendientes / ideas:**
+**Pendientes / ideas (de esa sesión, siguen abiertos):**
 1. Cosmético (heredado de v3): la lectura dice "media móvil 49,8 (la más baja desde 2025T4)"
    cuando el "desde" es el trimestre anterior; podría omitirse en ese caso.
 2. **T2-2026** cuando lo publique el INDEC: subir zip a `carga_EPH`, correr 00 y 01-06 (o
@@ -163,7 +203,7 @@ Total panel previo a T126: 1.825.881 filas (36 trimestres).
 - Sin dependencia de `pyeph`. Toda la lógica de carga en `src/data_loader.py`.
 - Detalle de funciones, gotchas y decisiones: [`docs/TECNICO.md`](../docs/TECNICO.md).
 
-## Notebooks (todos validados en Colab)
+## Notebooks (00-06 validados en Colab; 07 prototipo probado en la PC)
 
 | NB | Contenido | Base / ponderador |
 |---|---|---|
@@ -174,6 +214,7 @@ Total panel previo a T126: 1.825.881 filas (36 trimestres).
 | 04 | Tipo de vivienda (`IV1`), tenencia (`II7`), agua (`IV6`), desagüe (`IV11`), hacinamiento (`IX_TOT`/`II1`, crítico >3) | Hogar (jefe `CH03==1`) / `PONDERA` |
 | 05 | `NIVEL_ED` 25+, asistencia (`CH10`), público/privado (`CH11`), analfabetismo (`CH09`) | Personas / `PONDERA` |
 | 06 | Termómetro de la economía de los hogares 0-100, v4 con IC (ver sección Termómetro). Generado por `tools/gen_06_termometro.py`; prueba local `tools/probar_06_local.py` | Personas + Hogar / `PONDERA`, `PONDIIO`, `PONDIH` + IPC |
+| 07 | **Nowcast** de la dimensión D (prototipo, 2026-10-20; no validado en Colab): microsimulación sobre la última EPH, backtest, registro de versiones. Generado por `tools/gen_07_nowcast.py` (lógica en `src/nowcast.py`); prueba local `tools/probar_07_local.py` | Personas / `PONDIIO`, `PONDIH` + series de datos.gob.ar |
 
 Definiciones INDEC usadas en 02: PEA = `ESTADO∈{1,2}`; actividad = PEA/total;
 empleo = ocupados/total; desocupación = desocupados/PEA; subocupación = `INTENSI==1`/PEA.
@@ -204,3 +245,6 @@ empleo = ocupados/total; desocupación = desocupados/PEA; subocupación = `INTEN
   Evaluación del termómetro (bootstrap, 15 candidatas, 10 variantes, validación externa) →
   **v4**: IC bootstrap, sin cobertura de salud en B, dimensión D de ingresos reales (IPC
   nacional, `data/ipc_nacional.csv`). Validado en Colab (idéntico a la corrida local).
+- **2026-10-20**: diseño del nowcast del termómetro (proyectar indicadores, corregir con la EPH,
+  registro de versiones) y prototipo `07_nowcast` para la dimensión D (microsimulación, backtest
+  2019-2026: D 9,5 pts vs 14,8 de repetir el último). Probado en la PC; falta Colab.

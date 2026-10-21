@@ -169,7 +169,75 @@ INDEC los zips que falten a `data/raw/`, compila los parquets que falten a `data
 ~30 s una vez compilado (la compilación inicial ~1,5 min). Los números coinciden con Colab
 (verificado: réplica exacta de v3, y el CSV de v4 idéntico al de Colab, bootstrap incluido). En Windows usar `PYTHONUTF8=1` (la salida usa ✓/⚠/↑/↓).
 
-## 7. Entorno
+## 7. Notebook 07 — nowcast de la dimensión D (prototipo, 2026-10-20)
+
+**Se genera:** `python tools/gen_07_nowcast.py`. La lógica vive en `src/nowcast.py`; el notebook
+solo la llama y muestra. Probar: `python tools/probar_07_local.py` (correr antes el 06 si cambió:
+el 07 compara sus indicadores oficiales contra `termometro_EPH.csv`). Salidas en
+`carga_EPH/resultados/nowcast/` (local: `data/processed/resultados_06/nowcast/`). ~40-50 s local.
+
+**Objetivo:** tener D (ingresos reales) antes de que salga la EPH (~85 días después del
+trimestre), corregirla cuando sale y registrar cada versión. A, B y C se sumarán con el mismo
+esquema (proyectar cada indicador en sus unidades y pasarlo por la normalización del 06).
+
+Piezas de `src/nowcast.py`:
+- **Series (`SERIES`)**: id de datos.gob.ar, desfase en meses y rezago de publicación en días (este
+  solo para el backtest). IPC `148.3_INIVELNAL_DICI_M_26`; salarios registrado privado
+  `149.1_SOR_PRIADO_OCTU_0_25`, público `149.1_SOR_PUBICO_OCTU_0_14`, no registrado
+  `149.1_SOR_PRIADO_OCTU_0_28`; haber mínimo `58.1_MP_0_M_24`; AUH `165.1_AAUH_0_0_3`. Respaldo
+  `data/series_nowcast.csv` (tal como vienen de la API, sin desfasar; `nc.actualizar_respaldo(ruta)`
+  lo reescribe solo si vinieron todas). Bono previsional: `data/bono_previsional.csv`, copia
+  manual de `IPC_jubilados/data/reference/` (actualizar en los dos repos). RIPTE (`158.1_REPTE_0_0_5`)
+  vino vacío de la API: no se usa.
+- **No registrado realineado 6 meses** (`desfase`): la API lo fecha en el mes de publicación.
+  Correlación de la variación i.a. con el `P21` nominal de los asalariados no registrados de la
+  EPH: 0,874 sin desfase, 0,982 con 5 (rezago que informa el INDEC), 0,988 con 6.
+- **Microdatos (`preparar_base`)**: cada ingreso de cada persona va a una clase (`INDICE_DE_CLASE`):
+  `P21`+`TOT_P12` según grupo (asalariado registrado público `PP04A==1` / privado, no registrado,
+  cuentapropista o patrón → índice no registrado); `V2*`+`V21*` (jubilaciones + aguinaldo) →
+  haber mínimo, o mínimo + bono si el haber es ≤ 1,05 × (mínimo + bono); `V5_M`/`V5_01_M` → AUH; el
+  resto de los `V*_M` → IPC. Se suman por hogar (`Y`, hogares × clases). Identidades verificadas en
+  T126: `T_VI` = Σ `V*_M` (99,99%), `ITF` = Σ `P47T` e `IPCF` = `ITF`/`IX_TOT` (100%).
+- **Microsimulación (`indicadores`)**: `log P21` + log del factor de su clase; `IPCF` × factor del
+  hogar (Σ g·Y / Σ Y); deflactor = IPC promedio de los meses de referencia. Mismas fórmulas que
+  `INDICADORES` del 06: con factores 1 da el oficial (control de la sección 3 del 07: diferencia
+  < 1e-6 en los 37 trimestres, incluida D).
+- **Proyección (`proyectar_indicadores`)**: método `"estacional"` = microsimulación desde la última
+  base + (factor estacional del objetivo − el de la base), con los factores del 06 estimados hasta
+  la base. `"anual"` (base = mismo trimestre del año anterior) erra el doble: queda solo como
+  comparación. Meses sin dato (`extender`): mediana de las últimas 3 variaciones; el no registrado
+  sigue al registrado privado mientras éste tiene dato (`GUIA`) y después su propia tendencia
+  (seguir también la tendencia estimada del privado empeoró el backtest); el bono queda constante.
+- **D**: `dimension_D` usa copias exactas de `desestacionalizar` y `percentil_orientado` del 06.
+  `D_tiempo_real` = D de cada trimestre cuando era el último (contra eso se mide el error).
+- **Backtest (`backtest`, `grilla_horizontes`, `resumir`)**: objetivos 2019T1 → último; k (trimestres
+  entre base y objetivo) 1-3 y días respecto del cierre del objetivo −75, −30, 0, 45, 80, 120, solo
+  si la base ya podía estar publicada (días ≥ 85 − 90·k). Las series se recortan a lo publicado en
+  esa fecha (`publicado`). Benchmarks: último D publicado y persistencia (base + estacionalidad).
+  RMSE sin 2020T2-2021T1. Limitación: usa las series actuales, no las versiones de cada momento.
+- **Deriva (`estimar_deriva`, `aplicar_deriva`)**: corrige el sesgo con los últimos errores a k=1 ya
+  conocidos. Probado con ventanas 4, 8, 12 y todos: baja el sesgo de D pero no el error cuadrático
+  y empeora el ingreso laboral → `CORREGIR_DERIVA = False` en el notebook.
+- **Bandas**: `error_esperado(res, k, días)` → ±1,96 × RMSE del horizonte más parecido del backtest.
+- **Registro (`filas_registro`, `registrar`, `conciliar`)**: `nowcast/registro_versiones.csv`,
+  formato CSV estándar. Clave (`fecha_corrida`, `version`, `trimestre`, `indicador`): una corrida
+  del mismo día reemplaza a la anterior. `conciliar` completa `oficial` (para D, `D_tiempo_real`) y
+  `error` = proyectado − oficial cuando el trimestre ya tiene EPH.
+
+**Resultados del backtest (2026-10-20, 25 trimestres sin pandemia):**
+
+| Horizonte | D: proyección | D: repetir el último | Ingreso laboral real | Ingreso bajo |
+|---|---|---|---|---|
+| k=1, 80 días después del cierre | 9,5 pts | 14,8 | 3,5% (persistencia 6,4%) | 1,8 pp (3,3) |
+| k=2, al cierre | 14,5 | 21,8 | 4,6% (9,8%) | 2,7 pp (4,7) |
+| k=3, 75 días antes del cierre | 19,9 | 26,4 | 5,6% (11,2%) | 3,3 pp (5,3) |
+
+Sesgo: la proyección es algo pesimista (+2,7 pts de D a k=1, +5 a +10 a k=2-3; los ingresos de la
+EPH crecen ~0,3-0,5% por trimestre más que los índices). Mayor error: 2025T1 (+36,7 pts; el
+ingreso laboral real de la EPH subió 10% contra el trimestre anterior). Un error de 3% en el
+ingreso laboral puede mover D ~10 pts si cae en una zona densa de la historia.
+
+## 8. Entorno
 
 - Colab: no requiere instalar nada extra (pandas, pyarrow, matplotlib, seaborn vienen).
 - Local: `pip install -r requirements.txt` (pandas, numpy, matplotlib, seaborn, pyarrow,

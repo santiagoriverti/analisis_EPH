@@ -19,6 +19,9 @@ Proyecto de notebooks (Google Colab) de análisis de la EPH del INDEC.
 Colab. El 06 pasó a la **v4** (4 dimensiones con ingresos reales deflactados por IPC,
 intervalos de confianza bootstrap), validada en Colab (idéntica a la corrida local con
 `tools/probar_06_local.py`). Pendientes e ideas en el HANDOFF de la memoria.
+**2026-10-20:** nuevo `07_nowcast` (prototipo, solo dimensión D): proyecta los ingresos reales
+antes de la EPH por microsimulación (`src/nowcast.py`), con backtest y registro de versiones.
+Probado en la PC; **falta validarlo en Colab** y sumar A, B y C.
 Datos: `.zip` del INDEC en Google Drive (`carga_EPH`), compilados a parquets por
 trimestre en `carga_EPH/processed`. Los datos NO están en el repo: viven en el Drive del
 usuario; el código corre en Colab, así que cambiar de PC solo requiere clonar el repo.
@@ -34,6 +37,10 @@ usuario; el código corre en Colab, así que cambiar de PC solo requiere clonar 
 - Editar notebooks vía JSON (`json.load`/`json.dump`), no con `sed` sobre el `.ipynb`.
 - **El notebook 06 se genera** con `tools/gen_06_termometro.py`: editar el script y
   regenerar (`python tools/gen_06_termometro.py`), nunca el `.ipynb` directo.
+- **El notebook 07 se genera** con `tools/gen_07_nowcast.py`; su lógica vive en `src/nowcast.py`
+  (las fórmulas de D y la normalización son copias de las del 06: si cambia el 06, cambiar las
+  dos y verificar con el control de la sección 3 del 07). Probar con `tools/probar_07_local.py`
+  después de correr el 06. Ver `docs/TECNICO.md` §7.
 - No hay datos EPH en el repo. En la PC se pueden tener los datos reales:
   `python tools/probar_06_local.py --descargar` baja los zips del INDEC a `data/raw/`, compila
   a `data/processed/` (ambos ignorados) y corre el 06. Para los demás notebooks, Colab sigue

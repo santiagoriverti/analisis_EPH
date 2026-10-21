@@ -52,7 +52,8 @@ def descargar():
         anio += 1
 
 
-def correr_notebook():
+def correr_notebook(nombre="06_termometro"):
+    """Ejecuta notebooks/<nombre>.ipynb salvo la celda de setup de Colab (también lo usa probar_07_local)."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -66,7 +67,7 @@ def correr_notebook():
     dl.list_available_quarters = disponibles
     plt.show = lambda *a, **k: plt.close("all")  # el notebook ya guarda cada gráfico (guardar_figura)
 
-    nb = json.load(open(os.path.join(REPO, "notebooks", "06_termometro.ipynb"), encoding="utf-8"))
+    nb = json.load(open(os.path.join(REPO, "notebooks", f"{nombre}.ipynb"), encoding="utf-8"))
     celdas = ["".join(c["source"]) for c in nb["cells"] if c["cell_type"] == "code"]
     ns = {"REPO_DIR": REPO, "PROCESSED_DIR": processed, "RESULTADOS_DIR": resultados,
           "display": print, "__name__": "__main__"}
@@ -75,7 +76,7 @@ def correr_notebook():
     for i, src in enumerate(celdas[1:], start=1):  # la celda 0 es el setup de Colab
         exec(src.replace("display(Markdown(resumen))", "print(resumen)"), ns)
         print(f"[celda {i} ok]", flush=True)
-    print(f"\nNotebook 06 completo en {time.time() - t0:.0f} s; salidas y gráficos en {resultados}")
+    print(f"\nNotebook {nombre} completo en {time.time() - t0:.0f} s; salidas y gráficos en {resultados}")
 
 
 if __name__ == "__main__":

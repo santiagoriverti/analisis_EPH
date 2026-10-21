@@ -30,7 +30,7 @@ analisis_EPH/
 │   ├── raw/          # Bases EPH descargadas manualmente (txt/xls del INDEC)
 │   └── processed/    # Datasets intermedios/limpios generados por los notebooks
 ├── src/              # Funciones compartidas (carga de datos, armonización, utils)
-├── tools/            # Generadores (ej. gen_06_termometro.py crea el notebook 06)
+├── tools/            # Generadores de los notebooks 06 y 07 (gen_06/gen_07) y pruebas locales
 ├── docs/             # Documentación técnica (TECNICO.md)
 └── .claude/          # Memoria/contexto del proyecto para sesiones de Claude Code
 ```
@@ -39,7 +39,7 @@ analisis_EPH/
 
 El notebook **00** es el punto de partida: **compila** las bases (une individuos+hogares
 de todos los trimestres) y genera los datasets procesados en `data/processed/`. El resto
-de los notebooks (01-06) **parten de esos datasets** ya compilados, en lugar de descargar
+de los notebooks (01-07) **parten de esos datasets** ya compilados, en lugar de descargar
 y unir las bases de nuevo.
 
 | Notebook | Tema | Colab |
@@ -51,6 +51,7 @@ y unir las bases de nuevo.
 | `04_vivienda.ipynb` | Tipo de vivienda, tenencia, servicios (agua/cloaca), hacinamiento, déficit | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/04_vivienda.ipynb) |
 | `05_educacion.ipynb` | Nivel educativo, asistencia escolar, público/privado, analfabetismo | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/05_educacion.ipynb) |
 | `06_termometro.ipynb` | **Termómetro de la economía de los hogares**: índice de malestar 0-100 (cantidad de empleo y despidos, calidad del empleo, estrategias de supervivencia de los hogares, ingresos reales) con intervalos de confianza: lectura automática del último trimestre, evolución, mapa de calor, promedios anuales, controles de calidad y exportación a Drive | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/06_termometro.ipynb) |
+| `07_nowcast.ipynb` | **Nowcast del termómetro (prototipo, solo dimensión D)**: proyecta los ingresos reales antes de que salga la EPH con una microsimulación sobre la última base (salarios por sector, haberes, AUH, IPC), backtest en pseudo tiempo real y registro de versiones que mide el error cuando llega la EPH oficial | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/07_nowcast.ipynb) |
 
 **Cobertura actual:** 37 trimestres, **T1-2017 → T1-2026** (todos los notebooks validados en Colab).
 
@@ -149,6 +150,29 @@ mano) y se puede probar en la PC con datos reales con `python tools/probar_06_lo
 --descargar`. Detalle metodológico en [`docs/TECNICO.md`](docs/TECNICO.md) §6 y diccionario
 de variables en [`.claude/memoria_EPH.md`](.claude/memoria_EPH.md) §9.
 
+## Nowcast del termómetro (notebook 07, prototipo)
+
+La EPH sale ~85 días después de cada trimestre. El 07 **proyecta la dimensión D (ingresos
+reales)** del termómetro antes de esa fecha: toma los microdatos de la última EPH y actualiza el
+ingreso de cada persona con índices mensuales que se publican antes (índice de salarios del
+INDEC por sector, haber mínimo y bono, AUH, IPC), recalcula los indicadores de D con las mismas
+fórmulas del 06 y los normaliza igual. Cuando sale la EPH, el trimestre pasa a oficial y cada
+versión guardada en el **registro de versiones** (`carga_EPH/resultados/nowcast/`) recibe su error.
+
+**Backtest (2019-2026, sin pandemia):** con la EPH del trimestre anterior, la proyección de D erra
+9,5 pts (RMSE) contra 14,8 de repetir el último dato publicado; el ingreso laboral real, 3,5%
+(contra 6,4%), y el % de personas con ingreso bajo, 1,8 pp (contra 3,3). Si la EPH se demora (dos o
+tres trimestres sin dato, como en oct-2026), el error sube a 12-20 pts, pero sigue debajo de
+repetir el último (22-26).
+
+**Nowcast al 20/10/2026** (base 2026T1, D = 31,9; el T2-2026 todavía no estaba publicado):
+2026T2 D = 35 (IC 95% 17-53), 2026T3 = 32 (3-60), 2026T4 = 24 (0-63). Intervalos = ±1,96 × error
+del backtest para ese horizonte.
+
+Generado con `python tools/gen_07_nowcast.py`; prueba local `python tools/probar_07_local.py`
+(después del 06). Detalle en [`docs/TECNICO.md`](docs/TECNICO.md) §7. Próximo paso: sumar A, B y
+C con el mismo esquema.
+
 ## Continuar en otra PC
 
 Los datos no están en el repo (viven en el Google Drive del usuario) y los notebooks
@@ -174,7 +198,8 @@ pip install -r requirements.txt
 
 Para correr localmente, poner los `.zip` del INDEC en `data/raw/` (no se versionan).
 `python tools/probar_06_local.py --descargar` los baja del sitio del INDEC, compila los
-parquets en `data/processed/` (ignorado por git) y corre el notebook 06 completo.
+parquets en `data/processed/` (ignorado por git) y corre el notebook 06 completo;
+`python tools/probar_07_local.py` hace lo mismo con el 07 (nowcast).
 
 ## Documentación técnica
 
