@@ -67,7 +67,7 @@ y unir las bases de nuevo.
 
 **Cobertura actual:** 37 trimestres, **T1-2017 → T1-2026** (00-06 validados en Colab; el 07
 validado en Colab salvo su sección de robustez y el gráfico de evolución, agregados el 2026-10-21;
-el 08, creado el 2026-10-22, probado en la PC con datos reales y pendiente de Colab).
+el 08, creado el 2026-10-22, validado en Colab: idéntico a la corrida local con datos reales).
 
 ### Qué hace el notebook 00 (compilación)
 

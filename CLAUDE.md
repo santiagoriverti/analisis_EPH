@@ -23,8 +23,8 @@ ecuaciones puente; backtest, robustez y registro de versiones) y **08 adultos ma
 (varones 65+, mujeres 60+: convivencia, jubilación, ingresos, pobreza, trabajo, vivienda; con IC
 bootstrap, por región y aglomerado, evolución y Excel/CSV/PNG/ZIP), con **37 trimestres T1-2017 →
 T1-2026**. 00-06 validados en Colab; el 07 validado en Colab hasta el termómetro completo
-(2026-10-21; falta correr en Colab su sección 7 y el gráfico `nowcast_05_evolucion`). **El 08
-(2026-10-22) está probado en la PC con datos reales; falta correrlo en Colab.** El T2-2026 de la
+(2026-10-21; falta correr en Colab su sección 7 y el gráfico `nowcast_05_evolucion`). El 08
+(2026-10-22) está validado en Colab (idéntico a la corrida local). El T2-2026 de la
 EPH todavía no estaba publicado. Pendientes en el HANDOFF de la memoria.
 
 Datos: `.zip` del INDEC en Google Drive (`carga_EPH`), compilados a parquets por trimestre en

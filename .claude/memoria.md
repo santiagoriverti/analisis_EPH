@@ -7,8 +7,9 @@
 
 ## ⭐ HANDOFF (última sesión: 2026-10-22)
 
-**Estado: notebook 08 (adultos mayores y jubilados) creado, probado en la PC con datos reales y
-commiteado/pusheado a `main`; falta correrlo en Colab.** El resto sin cambios desde el 2026-10-21.
+**Estado: notebook 08 (adultos mayores y jubilados) creado y validado en Colab el 2026-10-22**
+(commit e2a23a3: las 38 tablas, el resumen y los 20 gráficos idénticos a la corrida local, dif. relativa
+máx. 5e-16; sección 15 toda ✓). El resto sin cambios desde el 2026-10-21.
 - **08 (2026-10-22):** pedido del usuario: situación demográfica de los adultos mayores (varones 65+,
   mujeres 60+), cómo viven, si cobran jubilación y cuánto, ingresos, si viven con sus hijos o los
   hijos con ellos según quién es jefe de hogar. Decisiones del usuario: foto con los **últimos 4
@@ -37,9 +38,9 @@ commiteado/pusheado a `main`; falta correrlo en Colab.** El resto sin cambios de
    del INDEC, compila y corre el 06) y después `python tools/probar_07_local.py` (~5 min).
 3. En Colab: correr el 06 y después el 07 (el 07 lee del CSV del 06). El 08 es independiente.
 
-**Próximo paso inmediato:** correr el **08 en Colab** (que la sección 15 dé todo ✓ y comparar
-`tablas/*.csv` con la corrida local de `data/processed/resultados_06/jubilados/`) y correr 06 + 07 en
-Colab para validar la sección 7 del 07 y su gráfico nuevo.
+**Próximo paso inmediato:** correr 06 + 07 en Colab para validar la sección 7 del 07 y su gráfico
+nuevo. Para validar el 08 después de un cambio: comparar `tablas/*.csv` del ZIP de Colab con
+`data/processed/resultados_06/jubilados/tablas/` (deben coincidir salvo ~1e-15).
 
 **Pendientes (en orden):**
 1. **Cuando salga el T2-2026:** subir el zip → 00 → 06 → 07 → 08. El registro concilia las versiones
@@ -295,7 +296,7 @@ T4 = 62,8 / 58,6 / 54,1 (D 35,1 / 31,6 / 24,4).
 | 05 | `NIVEL_ED` 25+, asistencia (`CH10`), público/privado (`CH11`), analfabetismo (`CH09`) | Personas / `PONDERA` |
 | 06 | Termómetro de la economía de los hogares 0-100, v4 con IC (ver sección Termómetro). Generado por `tools/gen_06_termometro.py`; prueba local `tools/probar_06_local.py`. Validado en Colab | Personas + Hogar / `PONDERA`, `PONDIIO`, `PONDIH` + IPC |
 | 07 | **Nowcast del termómetro** (ver sección Nowcast): D por microsimulación, A, B y C por ecuaciones puente, backtest, robustez (sección 7), registro de versiones, gráficos `nowcast_01` … `nowcast_05`. Generado por `tools/gen_07_nowcast.py` (lógica en `src/nowcast.py`); prueba local `tools/probar_07_local.py`. Validado en Colab salvo la sección 7 y `nowcast_05_evolucion` | Personas / `PONDIIO`, `PONDIH` + CSV del 06 + series de datos.gob.ar |
-| 08 | **Adultos mayores y jubilados** (ver sección 08): convivencia, jubilación, ingresos, pobreza (réplica INDEC), trabajo, vivienda, estrategias, salud; región y aglomerado; evolución; IC bootstrap; Excel/CSV/PNG/ZIP en `resultados/jubilados/`. Generado por `tools/gen_08_jubilados.py` (lógica en `src/jubilados.py`); prueba local `tools/probar_08_local.py`. Probado en la PC, falta Colab | Personas / `PONDERA`, `PONDII`, `PONDIIO`, `PONDIH` + IPC, haber mínimo, canastas y pobreza oficial |
+| 08 | **Adultos mayores y jubilados** (ver sección 08): convivencia, jubilación, ingresos, pobreza (réplica INDEC), trabajo, vivienda, estrategias, salud; región y aglomerado; evolución; IC bootstrap; Excel/CSV/PNG/ZIP en `resultados/jubilados/`. Generado por `tools/gen_08_jubilados.py` (lógica en `src/jubilados.py`); prueba local `tools/probar_08_local.py`. Validado en Colab (2026-10-22) | Personas / `PONDERA`, `PONDII`, `PONDIIO`, `PONDIH` + IPC, haber mínimo, canastas y pobreza oficial |
 
 Definiciones INDEC usadas en 02: PEA = `ESTADO∈{1,2}`; actividad = PEA/total;
 empleo = ocupados/total; desocupación = desocupados/PEA; subocupación = `INTENSI==1`/PEA.
@@ -337,4 +338,4 @@ empleo = ocupados/total; desocupación = desocupados/PEA; subocupación = `INTEN
   Colab. Después: sección 7 de robustez (subperíodos, calibración, versiones, dependencia de cada
   predictor), gráfico `nowcast_05_evolucion`, guía `docs/NOWCAST.md` y documentación consolidada
   para continuar en otra PC (falta correr en Colab la sección 7 y el gráfico).
-- **2026-10-22**: notebook 08 de adultos mayores y jubilados (preguntas de diseño al usuario; `src/jubilados.py`, generador y prueba local; respaldos `data/canastas_regionales.csv` y `data/pobreza_oficial.csv`; `openpyxl` en requirements). Identificada la columna faltante de T126 (`CAT_INAC`). Probado en la PC con datos reales; falta Colab.
+- **2026-10-22**: notebook 08 de adultos mayores y jubilados (preguntas de diseño al usuario; `src/jubilados.py`, generador y prueba local; respaldos `data/canastas_regionales.csv` y `data/pobreza_oficial.csv`; `openpyxl` en requirements). Identificada la columna faltante de T126 (`CAT_INAC`). Validado en Colab el mismo día (idéntico a la corrida local).
