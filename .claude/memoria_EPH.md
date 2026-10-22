@@ -46,7 +46,7 @@ Verificado en los headers reales. Hay **dos esquemas distintos** según el trime
 |---|---|---|---|
 | **T1-2017 → T3-2023** | **177** | **88** | "viejo" (agregado) |
 | **T4-2023 → T4-2025** | **235** | **98** | "nuevo" (desagregado) |
-| **T1-2026** | **234** | **98** | "nuevo" (1 col. individual menos, sin identificar; no afecta a los notebooks) |
+| **T1-2026** | **234** | **98** | "nuevo" (sin `CAT_INAC`, identificado 2026-10-22; no afecta a los notebooks) |
 
 El INDEC, a partir del **4° trimestre de 2023**, incorporó nuevas variables:
 informalidad laboral (`EMPLEO`, `SECTOR`), estrategias del hogar e ingresos no laborales
@@ -237,7 +237,7 @@ agregados (V2, V21, V22, V5, V11); **esquema nuevo** (desde 4T2023) los desagreg
 |---|---|---|
 | ESTADO | N(1) | **Condición de actividad:** 0=entrevista no realizada, 1=Ocupado, 2=Desocupado, 3=Inactivo, 4=Menor de 10 años |
 | CAT_OCUP | N(1) | **Categoría ocupacional** (ocupados y desocup. c/ocup. anterior): 1=Patrón, 2=Cuenta propia, 3=Obrero/empleado, 4=Trabajador familiar sin remuneración, 9=Ns/Nr |
-| CAT_INAC | N(1) | **Categoría de inactividad:** 1=Jubilado/pensionado, 2=Rentista, 3=Estudiante, 4=Ama de casa, 5=Menor de 6 años, 6=Discapacitado, 7=Otros |
+| CAT_INAC | N(1) | **Categoría de inactividad:** 1=Jubilado/pensionado, 2=Rentista, 3=Estudiante, 4=Ama de casa, 5=Menor de 6 años, 6=Discapacitado, 7=Otros. ⚠️ **No sirve para identificar jubilados:** desde 4T2023 ~20% de los adultos mayores pasó de 1 a 4 (adultos mayores con `CAT_INAC==1`: ~76% hasta 3T2023, ~52% después) y **no viene en la base de 1T2026**. Usar el monto de jubilación (ver §10) |
 | IMPUTA | N(1) | Indica casos imputados |
 | EMPLEO | N(1) | **(desde 4T2023)** Formalidad del empleo: 1=Formal, 2=Informal, 9=Ns/Nr |
 | SECTOR | N(1) | **(desde 4T2023)** Sector: 1=Formal, 2=Informal, 3=Hogares, 9=Ns/Nr |
@@ -373,3 +373,33 @@ altos, 5 otras laborales, 6 jubilación, 7 personales), `PP3E_TOT`/`PP3F_TOT` (h
 Ns/Nr), `PP03G`, `PP07C`, `V3`, `V4` (ver Anexo A del 06). La distribución de `PP11O` y `PP03C` es estable entre esquemas
 (verificado en el diagnóstico de candidatas del notebook 06, hoy Anexo A; `PP11O` se sigue
 monitoreando en la sección 13, junto con `CH08`).
+
+---
+
+## 10. Variables usadas en el notebook 08 (adultos mayores) — verificadas con datos reales (2026-10-22)
+
+Adultos mayores (AM) = varones `CH04==1` con `CH06>=65` y mujeres `CH04==2` con `CH06>=60`
+(~7.500 casos por trimestre, ~14-16% de la población de los aglomerados).
+
+| Variable | Uso en el 08 | Notas |
+|---|---|---|
+| `V2_M` (≤3T2023) / `V2_01_M` + `V2_02_M` + `V2_03_M` (≥4T2023) | Monto de jubilación o pensión; cobra = monto > 0 | `V2_01` por aportes, `V2_02` moratoria ("ama de casa"), `V2_03` otras pensiones (PUAM, discapacidad, madre de 7 hijos, vejez). No respuesta = −9 en el monto (~11% de los AM), con `PONDII = 0`: con `PONDII` la cobertura da ~88-89% en los dos esquemas. La EPH no separa jubilación de pensión por fallecimiento |
+| `V21_M` / `V21_0x_M`, `V22_0x_M` | Aguinaldo y retroactivo de la jubilación (composición del ingreso) | `V22_*_M` solo en el esquema nuevo |
+| `CH03` de todos los integrantes | Tipología de convivencia y si viven con hijos | AM jefe/a o cónyuge con `CH03==3` en el hogar = "hijos en el hogar del AM"; AM con `CH03∈{6,7}` = "AM en el hogar de un hijo/a" (~6-7%) |
+| `P47T`, `ITF` | Parte del ingreso del hogar que aportan los AM | Solo hogares con `PONDIH > 0` (ingresos completos) |
+| `P_DECCF` | Decil de IPCF de las personas (≥4T2023) | 1-10; 12/13 = sin respuesta / sin entrevista |
+| `CH08` | Cobertura de salud | 1/12/13/123 obra social (incluye PAMI) ~90% de los AM |
+| `VII1_1`, `VII1_2` (base hogar) | Nº de `COMPONENTE` de quien hace las tareas de la casa | 96 servicio doméstico, 97 persona externa |
+| `CH07` | Estado civil (viudez) | ~27% de los AM son viudos/as |
+
+**Pobreza e indigencia:** ITF del hogar contra CBT / CBA por adulto equivalente de su región
+(tabla del INDEC por edad y sexo, `CH06 = −1` → menor de 1 año), **promedio de los tres meses
+calendario del trimestre**, personas con `PONDIH`. Replica la tasa oficial de personas con error
+medio 0,1 pp (2017S1-2025S2); con los meses de referencia de los ingresos (mes anterior) erraba
+2,1 pp. Canastas por región: datos.gob.ar datasets 445.1 (CBA) y 446.1 (CBT); pobreza oficial:
+dataset 64.2 (sin columna de Cuyo).
+
+**Haber en mínimas:** monto declarado / haber mínimo promedio de los meses de referencia (mes
+anterior a la entrevista): con esos meses hay más masa en la mínima que con los meses calendario.
+Muchos declaran menos que la mínima: el monto es el que se cobra en mano (descuentos de cuotas de
+moratoria y créditos de ANSES) o una pensión no contributiva (PUAM = 80% de la mínima).

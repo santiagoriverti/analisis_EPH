@@ -5,9 +5,17 @@
 > nowcast en [`docs/NOWCAST.md`](../docs/NOWCAST.md); diccionario de variables en
 > [`memoria_EPH.md`](memoria_EPH.md).
 
-## ⭐ HANDOFF (última sesión: 2026-10-21)
+## ⭐ HANDOFF (última sesión: 2026-10-22)
 
-**Estado: todo commiteado y pusheado a `main`, sin trabajo a medias.**
+**Estado: notebook 08 (adultos mayores y jubilados) creado, probado en la PC con datos reales y
+commiteado/pusheado a `main`; falta correrlo en Colab.** El resto sin cambios desde el 2026-10-21.
+- **08 (2026-10-22):** pedido del usuario: situación demográfica de los adultos mayores (varones 65+,
+  mujeres 60+), cómo viven, si cobran jubilación y cuánto, ingresos, si viven con sus hijos o los
+  hijos con ellos según quién es jefe de hogar. Decisiones del usuario: foto con los **últimos 4
+  trimestres**, **pobreza e indigencia con CBT/CBA** (metodología INDEC), comparar con el resto de la
+  población, tramos de edad, pre-jubilables, región y **aglomerado**; incluir trabajo, vivienda,
+  estrategias del hogar, salud/educación/viudez; **IC bootstrap + marcas de calidad**; salidas
+  **Excel + CSV + PNG + ZIP**. Ver sección "Adultos mayores (notebook 08)" abajo.
 - Notebooks 00-06 validados en Colab con 37 trimestres (T1-2017 → T1-2026). El termómetro v4 (06)
   no cambió desde el 2026-10-06.
 - **07 (nowcast del termómetro completo):** validado en Colab el 2026-10-21 hasta el commit
@@ -27,15 +35,17 @@
    `docs/TECNICO.md` §6-7.
 2. Datos reales en la PC (opcional): `python tools/probar_06_local.py --descargar` (baja los zips
    del INDEC, compila y corre el 06) y después `python tools/probar_07_local.py` (~5 min).
-3. En Colab: correr el 06 y después el 07 (el 07 lee del CSV del 06).
+3. En Colab: correr el 06 y después el 07 (el 07 lee del CSV del 06). El 08 es independiente.
 
-**Próximo paso inmediato:** correr 06 + 07 en Colab y comparar con la corrida local (CSV del 06,
-`backtest_termometro*.csv`, `nowcast_termometro.csv`, `robustez_termometro.md`) para validar la
-sección 7 y el gráfico nuevo.
+**Próximo paso inmediato:** correr el **08 en Colab** (que la sección 15 dé todo ✓ y comparar
+`tablas/*.csv` con la corrida local de `data/processed/resultados_06/jubilados/`) y correr 06 + 07 en
+Colab para validar la sección 7 del 07 y su gráfico nuevo.
 
 **Pendientes (en orden):**
-1. **Cuando salga el T2-2026:** subir el zip → 00 → 06 → 07. El registro concilia las versiones del
-   21/10: primer error real (comparar con el RMSE del backtest; ver `docs/NOWCAST.md` §5).
+1. **Cuando salga el T2-2026:** subir el zip → 00 → 06 → 07 → 08. El registro concilia las versiones
+   del 21/10: primer error real (comparar con el RMSE del backtest; ver `docs/NOWCAST.md` §5). El 08
+   corre su foto a T3-2025 a T2-2026 solo; si la canasta regional de abr-jun 2026 no está, la estima
+   con la nacional (aviso en la sección 15).
 2. Correr el 07 cuando salen sus series (IPC ~día 14, salarios ~45 días, EMAE ~55, SIPA ~100,
    confianza del consumidor a fin de mes) para acumular versiones.
 3. **Mantenimiento mensual:** fila nueva en `data/bono_previsional.csv` (última: 2026-10; también en
@@ -50,10 +60,44 @@ sección 7 y el gráfico nuevo.
    cuando el "desde" es el trimestre anterior); extensiones no empezadas (transiciones con el panel
    rotativo —recomendada—, termómetro por región o grupos, calidad del empleo por rama/tamaño,
    página de resultados); deciles "escalonados" en 03 (empates de IPCF; fix: decil por ranking
-   acumulado de `PONDIH`, sin confirmar); menores: columna faltante en T126 (234 vs 235), T3-2021
+   acumulado de `PONDIH`, sin confirmar); menores: T3-2021
    con 266 cols, contrastar la desocupación T1-2026 (7,8%) con el informe del INDEC, la skill global
    `indec-api` tiene un ID de IPC que no existe (`148.3_INIVELGENE_DICI_M_26`; el correcto es
    `148.3_INIVELNAL_DICI_M_26`).
+
+## Adultos mayores y jubilados (notebook 08) — 2026-10-22
+
+**Qué es:** foto de los adultos mayores (AM: varones 65+, mujeres 60+) con los últimos 4 trimestres
+juntos + evolución trimestral 2017-2026, con IC 95% bootstrap por vivienda en todo. Generado por
+`tools/gen_08_jubilados.py`; lógica en `src/jubilados.py`; prueba `tools/probar_08_local.py` (~3 min).
+Secciones: cuántos son · con quién viven (tipología, rol, hijos en el hogar del AM vs AM en el hogar
+de un hijo, hijos convivientes, quién sostiene a quién) · jubilación (cobertura, tipo, haber en
+mínimas) · ingresos · pobreza · trabajo y pre-jubilables · vivienda · estrategias · salud/educación/
+estado civil/tareas · regiones y aglomerados · evolución · lectura · controles · exportar.
+
+**Decisiones (con evidencia):**
+- Jubilado = monto `V2_M` (≤2023T3) o `V2_01_M + V2_02_M + V2_03_M` (≥2023T4) > 0, con `PONDII`
+  (~11% de los AM no declara montos). **`CAT_INAC` no sirve:** cambió de códigos en 2023T4 (AM con
+  `CAT_INAC==1` 76% → 52%; el resto pasó a "ama de casa") y **es la columna que falta en T126**.
+- **Pobreza con los meses calendario** del trimestre (convención INDEC): réplica vs oficial error
+  medio 0,11 pp, máx. 0,22 (18 semestres 2017S1-2025S2); por región 0,10-0,35 pp. Con el mes anterior
+  (como el IPC del 06) erraba 2,1 pp. Canastas regionales de datos.gob.ar (445.1 / 446.1; llegan con
+  atraso: si falta un mes se estima con la nacional × relación de los últimos 6 meses).
+- **Haber en mínimas con los meses de referencia** (mes anterior): más masa en la mínima que con los
+  meses calendario. "La mínima (con o sin bono)" = 0,95 × mín a 1,05 × (mín + bono). Debajo de la
+  mínima: 31% de los de moratoria (descuento de cuotas) y 66% de otras pensiones (PUAM = 80%).
+- "Trabaja" se mide con `PONDERA` (20,3%); con `PONDII` da menos (18,7%) porque los ocupados no
+  declaran ingresos más seguido. Jubilación × trabajo sí usa `PONDII`.
+- Educación: adultos desde 25 años (los de 18-24 todavía estudian).
+
+**Resultados (T2-2025 a T1-2026):** 4,44 M de AM (14,8% de la población, 66% mujeres); 33% de los
+hogares tiene un AM. Solos 22,0%, solo con pareja 29,8%, viven con hijos 39,8% (33,3% hijos en su
+hogar, 6,6% en el hogar de un hijo; 19% entre los de 85+). Cuando los hijos viven en el hogar del AM,
+los AM aportan más de la mitad del ingreso en el 55% (28% si el AM vive en el hogar del hijo).
+Cobertura 88,8% (mujeres 60-64: 69,5%); aportes 56,5%, moratoria 24,2%, otras 3,5%, más de uno 4,5%.
+Cobran la mínima 38,9%, menos 17,1%. Pobreza AM 11,6% (indigencia 1,7%) vs 28,3% adultos, 43,1%
+menores, 29,7% total; AM que no cobran 21,5%. 2017 7,2% → 2024 23,4% → 11,6%. Haber mediano real
+−33% vs 2017, −14% vs 2023. Trabajan 20,3% (59% de los que no cobran), 55% informales.
 
 ## Nowcast del termómetro (notebook 07) — `termómetro v1` vigente
 
@@ -251,6 +295,7 @@ T4 = 62,8 / 58,6 / 54,1 (D 35,1 / 31,6 / 24,4).
 | 05 | `NIVEL_ED` 25+, asistencia (`CH10`), público/privado (`CH11`), analfabetismo (`CH09`) | Personas / `PONDERA` |
 | 06 | Termómetro de la economía de los hogares 0-100, v4 con IC (ver sección Termómetro). Generado por `tools/gen_06_termometro.py`; prueba local `tools/probar_06_local.py`. Validado en Colab | Personas + Hogar / `PONDERA`, `PONDIIO`, `PONDIH` + IPC |
 | 07 | **Nowcast del termómetro** (ver sección Nowcast): D por microsimulación, A, B y C por ecuaciones puente, backtest, robustez (sección 7), registro de versiones, gráficos `nowcast_01` … `nowcast_05`. Generado por `tools/gen_07_nowcast.py` (lógica en `src/nowcast.py`); prueba local `tools/probar_07_local.py`. Validado en Colab salvo la sección 7 y `nowcast_05_evolucion` | Personas / `PONDIIO`, `PONDIH` + CSV del 06 + series de datos.gob.ar |
+| 08 | **Adultos mayores y jubilados** (ver sección 08): convivencia, jubilación, ingresos, pobreza (réplica INDEC), trabajo, vivienda, estrategias, salud; región y aglomerado; evolución; IC bootstrap; Excel/CSV/PNG/ZIP en `resultados/jubilados/`. Generado por `tools/gen_08_jubilados.py` (lógica en `src/jubilados.py`); prueba local `tools/probar_08_local.py`. Probado en la PC, falta Colab | Personas / `PONDERA`, `PONDII`, `PONDIIO`, `PONDIH` + IPC, haber mínimo, canastas y pobreza oficial |
 
 Definiciones INDEC usadas en 02: PEA = `ESTADO∈{1,2}`; actividad = PEA/total;
 empleo = ocupados/total; desocupación = desocupados/PEA; subocupación = `INTENSI==1`/PEA.
@@ -292,3 +337,4 @@ empleo = ocupados/total; desocupación = desocupados/PEA; subocupación = `INTEN
   Colab. Después: sección 7 de robustez (subperíodos, calibración, versiones, dependencia de cada
   predictor), gráfico `nowcast_05_evolucion`, guía `docs/NOWCAST.md` y documentación consolidada
   para continuar en otra PC (falta correr en Colab la sección 7 y el gráfico).
+- **2026-10-22**: notebook 08 de adultos mayores y jubilados (preguntas de diseño al usuario; `src/jubilados.py`, generador y prueba local; respaldos `data/canastas_regionales.csv` y `data/pobreza_oficial.csv`; `openpyxl` en requirements). Identificada la columna faltante de T126 (`CAT_INAC`). Probado en la PC con datos reales; falta Colab.

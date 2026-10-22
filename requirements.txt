@@ -5,3 +5,4 @@ seaborn
 pyarrow
 jupyter
 requests
+openpyxl

@@ -25,17 +25,20 @@ Como alternativa (o complemento), también se pueden colocar `.zip` o `.txt` sue
 
 ```
 analisis_EPH/
-├── notebooks/                 # Notebooks de análisis (Colab): 00-07
+├── notebooks/                 # Notebooks de análisis (Colab): 00-08
 ├── data/
 │   ├── raw/                   # Zips del INDEC (ignorado por git; probar_06_local --descargar)
 │   ├── processed/             # Parquets y salidas locales (ignorado por git)
 │   ├── ipc_nacional.csv       # Respaldo del IPC nacional (06)
-│   ├── series_nowcast.csv     # Respaldo de las series de datos.gob.ar del nowcast (07)
-│   └── bono_previsional.csv   # Bono previsional mensual, carga manual (07)
+│   ├── series_nowcast.csv     # Respaldo de las series de datos.gob.ar del nowcast (07; IPC y haber mínimo del 08)
+│   ├── bono_previsional.csv   # Bono previsional mensual, carga manual (07 y 08)
+│   ├── canastas_regionales.csv # Respaldo de la CBA y la CBT por región (08)
+│   └── pobreza_oficial.csv    # Respaldo de la pobreza publicada por el INDEC (08, validación)
 ├── src/
 │   ├── data_loader.py         # Carga y compilación de las bases EPH
-│   └── nowcast.py             # Lógica del nowcast del termómetro (07)
-├── tools/                     # Generadores de los notebooks 06 y 07 (gen_06/gen_07) y pruebas locales
+│   ├── nowcast.py             # Lógica del nowcast del termómetro (07)
+│   └── jubilados.py           # Lógica del análisis de adultos mayores (08)
+├── tools/                     # Generadores de los notebooks 06, 07 y 08 (gen_06/gen_07/gen_08) y pruebas locales
 ├── docs/
 │   ├── TECNICO.md             # Documentación técnica
 │   └── NOWCAST.md             # Rutina del nowcast: cuándo correrlo, qué mantener, qué revisar
@@ -60,8 +63,11 @@ y unir las bases de nuevo.
 | `06_termometro.ipynb` | **Termómetro de la economía de los hogares**: índice de malestar 0-100 (cantidad de empleo y despidos, calidad del empleo, estrategias de supervivencia de los hogares, ingresos reales) con intervalos de confianza: lectura automática del último trimestre, evolución, mapa de calor, promedios anuales, controles de calidad y exportación a Drive | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/06_termometro.ipynb) |
 | `07_nowcast.ipynb` | **Nowcast del termómetro**: proyecta las cuatro dimensiones antes de que salga la EPH (D por microsimulación sobre la última base con salarios, haberes, AUH e IPC; A, B y C con ecuaciones puente sobre EMAE, empleo registrado SIPA y confianza del consumidor), backtest en pseudo tiempo real y registro de versiones que mide el error cuando llega la EPH oficial | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/07_nowcast.ipynb) |
 
+| `08_jubilados.ipynb` | **Adultos mayores y jubilados** (varones 65+, mujeres 60+): cuántos son, con quién viven (si viven con sus hijos o los hijos con ellos, quién sostiene a quién), cobertura previsional, tipo de beneficio y haber en mínimas, ingresos, pobreza e indigencia (metodología INDEC), trabajo, vivienda, estrategias del hogar, salud, educación y estado civil; por región y aglomerado con IC, evolución 2017-2026 y salidas en Excel/CSV/PNG/ZIP | [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/santiagoriverti/analisis_EPH/blob/main/notebooks/08_jubilados.ipynb) |
+
 **Cobertura actual:** 37 trimestres, **T1-2017 → T1-2026** (00-06 validados en Colab; el 07
-validado en Colab salvo su sección de robustez y el gráfico de evolución, agregados el 2026-10-21).
+validado en Colab salvo su sección de robustez y el gráfico de evolución, agregados el 2026-10-21;
+el 08, creado el 2026-10-22, probado en la PC con datos reales y pendiente de Colab).
 
 ### Qué hace el notebook 00 (compilación)
 
@@ -204,6 +210,49 @@ Generado con `python tools/gen_07_nowcast.py`; prueba local `python tools/probar
 revisar, qué hacer cuando sale una EPH): [`docs/NOWCAST.md`](docs/NOWCAST.md). Detalle técnico:
 [`docs/TECNICO.md`](docs/TECNICO.md) §7.
 
+## Adultos mayores y jubilados (notebook 08)
+
+Cómo viven los **adultos mayores** (varones de 65 años o más y mujeres de 60 o más, las edades
+jubilatorias) y cómo se relaciona con cobrar o no una jubilación. La foto junta los **últimos 4
+trimestres** (más muestra y sin la estacionalidad del aguinaldo); la evolución va de 2017 a hoy.
+Todos los indicadores tienen **intervalo de confianza del 95%** (bootstrap por vivienda, como el 06)
+y se marcan las estimaciones poco precisas (criterio del INDEC para el coeficiente de variación).
+
+**Cómo se mide:** *cobra jubilación o pensión* = declara un monto (`V2_M`; desde 2023T4 separado en
+por aportes, moratoria y otras pensiones), con el ponderador de ingresos `PONDII`; `CAT_INAC` no
+sirve (cambió de códigos en 2023T4 y no viene en 2026T1). *Con quién viven* sale del parentesco de
+todos los integrantes del hogar: distingue si **los hijos viven en el hogar del adulto mayor** (es
+jefe/a o cónyuge) o **el adulto mayor vive en el hogar de un hijo/a**, y qué parte del ingreso del
+hogar aportan los adultos mayores. **Pobreza e indigencia** con la metodología del INDEC (adulto
+equivalente y canasta de la región): la réplica coincide con la tasa oficial con un error medio de
+0,1 pp (2017S1-2025S2). Ingresos en pesos constantes y en haberes mínimos.
+
+**Resultados (T2-2025 a T1-2026, 31 aglomerados urbanos):**
+
+- **4,44 millones** de adultos mayores (14,8% de la población; 66% mujeres); un tercio de los hogares
+  tiene al menos uno.
+- **Con quién viven:** 22% solos, 30% solo con su pareja, **40% con al menos un hijo/a**: en el 33%
+  los hijos viven en el hogar del adulto mayor y en el 7% el adulto mayor vive en el hogar de un hijo
+  (19% entre los de 85 y más). Los hijos que viven con ellos son en su mayoría adultos (69% tiene 30
+  años o más) y el 65% trabaja; aun así, en el 55% de esos hogares los adultos mayores aportan más de
+  la mitad del ingreso (28% cuando el adulto mayor vive en el hogar del hijo).
+- **Jubilación:** cobra el **88,8%** (mujeres de 60 a 64: 69,5%; de 75 en adelante: 96%). Por aportes
+  56,5%, moratoria 24,2%, otras pensiones 3,5% y más de un beneficio 4,5%. El 39% de los que cobran declara
+  la mínima (con o sin bono) y el 17% menos (descuentos de moratoria y créditos, PUAM). El haber
+  mediano real de los últimos 4 trimestres está un 33% debajo del de 2017 y un 14% debajo del de 2023.
+- **Pobreza:** **11,6%** de los adultos mayores (indigencia 1,7%), contra 28% de los adultos y 43% de
+  los menores de 18; 21,5% entre los que no cobran jubilación y 32% entre los que viven con hijos y
+  nietos. Solo el 13% está en los tres deciles de ingreso más pobres. En 2024 la pobreza de los
+  adultos mayores llegó a 23% (7% en 2017).
+- **Trabajo:** el 20% trabaja (59% de los que no cobran) y el 55% de los ocupados es informal.
+- **Vivienda:** 87% son propietarios; hacinamiento 2% (13% en el resto).
+
+**Salidas** (en Drive, `carga_EPH/resultados/jubilados/`): `jubilados_EPH.xlsx` (hoja Índice + 38
+tablas con valor, IC, casos y calidad), `tablas/*.csv` (`;` y coma decimal), 20 gráficos en
+`graficos/`, `jubilados_EPH_resumen.md` (lectura automática) y `jubilados_EPH.zip` con todo, que en
+Colab se descarga al final. Generado con `python tools/gen_08_jubilados.py`; prueba local
+`python tools/probar_08_local.py` (~3 min). Detalle técnico: [`docs/TECNICO.md`](docs/TECNICO.md) §8.
+
 ## Continuar en otra PC
 
 Los datos no están en el repo (viven en el Google Drive del usuario) y los notebooks
@@ -233,7 +282,8 @@ pip install -r requirements.txt
 Para correr localmente, poner los `.zip` del INDEC en `data/raw/` (no se versionan).
 `python tools/probar_06_local.py --descargar` los baja del sitio del INDEC, compila los
 parquets en `data/processed/` (ignorado por git) y corre el notebook 06 completo;
-`python tools/probar_07_local.py` hace lo mismo con el 07 (nowcast).
+`python tools/probar_07_local.py` hace lo mismo con el 07 (nowcast) y
+`python tools/probar_08_local.py` con el 08 (adultos mayores).
 
 ## Documentación técnica
 

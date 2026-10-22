@@ -15,7 +15,7 @@ EPH_usu_<Q>_Trim_<YYYY>_txt.zip  ──►   carga_EPH/*.zip
                                               ▼
                                        carga_EPH/processed/eph_T<Q><YY>.parquet
                                               │  (1 parquet por trimestre)
-                   01-07: copia a /content/processed_local (shutil.copy)
+                   01-08: copia a /content/processed_local (shutil.copy)
                                               ▼
                               load_panel(columns=[...], quarters=[...])
                                               │
@@ -23,11 +23,13 @@ EPH_usu_<Q>_Trim_<YYYY>_txt.zip  ──►   carga_EPH/*.zip
                                               │  (A, B y C del termómetro)
               07_nowcast  ──► carga_EPH/resultados/nowcast/ (registro_versiones.csv, nowcast, backtest,
                               robustez, graficos/)  + series de datos.gob.ar
+              08_jubilados ──► carga_EPH/resultados/jubilados/ (Excel, tablas/, graficos/, resumen, ZIP)
+                              + IPC, haber mínimo, canastas y pobreza oficial de datos.gob.ar
 ```
 
 - Rutas en Colab: `DRIVE_DIR = /content/drive/MyDrive/carga_EPH`,
   `DRIVE_PROCESSED = /content/drive/MyDrive/carga_EPH/processed`,
-  `PROCESSED_DIR` (01-07) = `/content/processed_local`; `RESULTADOS_DIR` (06-07) =
+  `PROCESSED_DIR` (01-08) = `/content/processed_local`; `RESULTADOS_DIR` (06-08) =
   `/content/drive/MyDrive/carga_EPH/resultados`.
 - Cada notebook clona (o hace `git pull` de) este repo en `/content/analisis_EPH` para
   importar `src/data_loader.py`. **Los cambios de código solo llegan a Colab después
@@ -64,7 +66,8 @@ Colab y superarían los 100 MB de GitHub.
 | T1-2026 | 234 | 98 | 331 |
 
 T1-2026: 43.739 personas, 15.447 hogares, 0 personas sin hogar en el merge. La columna
-faltante respecto de T4-2025 no fue identificada todavía (pendiente, no afecta notebooks).
+faltante respecto de T4-2025 es **`CAT_INAC`** (categoría de inactividad; identificada el
+2026-10-22). Ningún notebook la usa: el 08 identifica a los jubilados por el monto cobrado.
 
 Variables del esquema nuevo (primer dato en 2023T4): `EMPLEO`, `SECTOR`, `P_DECCF`,
 `V2_01_M`, `V5_01_M` y demás desagregadas (ver `memoria_EPH.md` §2).
@@ -347,13 +350,73 @@ crítico si sacarlo sube el error > 20% en algún horizonte. Resultados al 2026-
   por separado: si se agregan a la historia los siguientes trimestres proyectados, su percentil cambia
   ~1 punto (2026T2: 63,7 en vez de 62,8).
 
-## 8. Entorno
+## 8. Notebook 08 — adultos mayores y jubilados (2026-10-22)
+
+**Se genera, no se edita a mano:** `python tools/gen_08_jubilados.py` reescribe
+`notebooks/08_jubilados.ipynb`; la lógica vive en `src/jubilados.py` (definiciones, preparación de
+los microdatos, estimación con bootstrap, gráficos y exportación). Prueba local con datos reales:
+`python tools/probar_08_local.py` (~3 min; `--respaldos` regenera las copias de canastas y pobreza
+oficial). Salidas en `carga_EPH/resultados/jubilados/` (local: `data/processed/resultados_06/jubilados/`).
+
+**Definiciones** (pedido del usuario, 2026-10-22): adultos mayores (AM) = varones de 65+ y mujeres
+de 60+; pre-jubilables = varones de 60-64 y mujeres de 55-59. La **foto** junta los últimos 4
+trimestres (`FOTO`, se corre sola cuando entra un trimestre nuevo); la **evolución** recorre todos
+los trimestres de a uno (`COLS_SERIE`, `indicadores_trimestre`).
+
+| # | Sección | Contenido |
+|---|---|---|
+| 1-2 | Setup y datos | IPC y haber mínimo (API, respaldo `data/series_nowcast.csv`), bono (`data/bono_previsional.csv`), canastas (`data/canastas_regionales.csv`); `REF` = valores de referencia por trimestre; `d` = microdatos de la foto preparados; `bs` = bootstrap con las viviendas de toda la serie |
+| 3 | Cuántos son | millones de AM por sexo y tramo (promedio de 4 trimestres), % de la población, hogares con AM, pirámide 50+ |
+| 4 | Con quién viven | tipología `CONVIVENCIA`, rol en el hogar (`ROL`), `CON_HIJOS` (hijos en el hogar del AM / AM en el hogar de un hijo), hijos convivientes (edad, actividad), quién sostiene a quién (`SOSTEN`, `AM_SOSTEN`, `APORTE_AM`) |
+| 5 | Jubilación | cobertura (`COBRA`), tipo (`TIPO_JUB`, ≥2023T4), haber en mínimas (`BANDA_HABER`), haber mediano real |
+| 6 | Ingresos | IPCF mediano por grupo, deciles (`P_DECCF`), composición del ingreso (sin IC) |
+| 7 | Pobreza | pobreza e indigencia por grupo de edad; AM según convivencia, situación previsional, tipo, sexo y edad |
+| 8 | Trabajo | `JUB_TRABAJO`, ocupados por categoría, informalidad, horas e ingreso; trabajo según haber; pre-jubilables |
+| 9-11 | Vivienda, estrategias, salud | tenencia y servicios; `V6`, `V7`, `V13`-`V17`; cobertura de salud, educación (adultos desde 25 años), estado civil, tareas de la casa |
+| 12 | Regiones y aglomerados | 6 indicadores con IC (gráficos de puntos ordenados, línea = total) |
+| 13 | Evolución | 16 indicadores trimestrales con IC; haber mediano vs. haber mínimo real |
+| 14 | Lectura | `resumen` (Markdown) con las cifras principales |
+| 15 | Controles | muestra, no respuesta, **pobreza replicada vs. oficial** (total y regiones), salto de la cobertura en 2023T4, tipos vs. cobertura, canastas estimadas, masa en la mínima, estimaciones marcadas |
+| 16 | Exportar | `jubilados_EPH.xlsx` (hoja Índice + 38 tablas), `tablas/*.csv`, `graficos/*.png`, `jubilados_EPH_resumen.md`, `jubilados_EPH.zip` (se descarga en Colab) |
+
+**Piezas clave de `src/jubilados.py`:**
+- `preparar(df, ref)`: todas las variables del análisis. Las del hogar (tamaño, hijos, nietos, AM,
+  adultos equivalentes, ingreso de los AM) salen de agrupar por `HOG` = `CODUSU` + `NRO_HOGAR` +
+  trimestre. Las variables 0/1 valen `NaN` fuera de su universo, así que `estimar` toma solo los casos
+  con dato y el ponderador correcto.
+- `estimar(d, bs, valor, peso, por=..., tipo=...)` (`pct`, `media`, `mediana`, `total`) y
+  `distribucion(d, bs, var, peso, categorias, por=...)`: valor, IC 95%, casos, CV y `calidad`
+  (criterio del INDEC: CV > 20% o < 100 casos = "con cautela"; CV > 33% o < 50 casos = "no
+  confiable"). `juntar` une cortes; `ancho` arma la tabla para los gráficos apilados.
+- `Bootstrap`: Poisson(1) por vivienda, la misma vivienda con el mismo multiplicador en todos los
+  trimestres (como el 06). La foto junta 4 trimestres con viviendas repetidas (panel 2-2-2): el
+  bootstrap por vivienda lo tiene en cuenta.
+- `referencias`: por trimestre, IPC, haber mínimo y mínimo + bono (meses de referencia de los
+  ingresos) y CBA/CBT por región (meses calendario). Si falta la canasta regional de algún mes, se
+  usa la nacional × relación región/nacional de los últimos 6 meses y se avisa en los controles (las
+  regionales de datos.gob.ar se actualizan con atraso; la nacional, todos los meses).
+
+**Decisiones (con evidencia, 2026-10-22):**
+- *Jubilado* por monto (`V2_M` o la suma de `V2_01_M`-`V2_03_M`), no por `CAT_INAC`: este cambió de
+  códigos en 2023T4 (AM con `CAT_INAC==1`: 76% → 52%, el resto pasó a "ama de casa") y falta en
+  2026T1. Con el monto y `PONDII` la cobertura es 87,5-89% a ambos lados del cambio de esquema.
+- **Pobreza con los meses calendario del trimestre** (convención del INDEC): replica la tasa oficial
+  de personas con error medio 0,11 pp y máximo 0,23 pp (2017S1-2025S2). Con los meses de referencia
+  de los ingresos (mes anterior) el error medio era 2,1 pp (subestima).
+- **Haber en mínimas con los meses de referencia** (mes anterior a la entrevista): concentra más
+  casos en la mínima que los meses calendario (p. ej. 2026T1: 7,1% vs 3,2% a ±2% de la mínima).
+  Banda "la mínima (con o sin bono)" = 0,95 × mínima a 1,05 × (mínima + bono).
+- Hijos = `CH03==3` (hijos e hijastros del jefe/a): si el AM es cónyuge, pueden ser hijastros.
+
+## 9. Entorno
 
 - Colab: no requiere instalar nada extra (pandas, pyarrow, matplotlib, seaborn vienen).
 - Local: `pip install -r requirements.txt` (pandas, numpy, matplotlib, seaborn, pyarrow,
-  jupyter, requests). Python ≥ 3.10 (se usan type hints `tuple[int, int] | None`); probado con 3.14.
+  jupyter, requests, openpyxl para el Excel del 08). Python ≥ 3.10 (se usan type hints
+  `tuple[int, int] | None`); probado con 3.14.
 - Prueba completa del 06 con datos reales: `python tools/probar_06_local.py --descargar` (~30 s una
-  vez compilado); del 07: `python tools/probar_07_local.py` (~5 min).
+  vez compilado); del 07: `python tools/probar_07_local.py` (~5 min); del 08:
+  `python tools/probar_08_local.py` (~3 min).
 - Windows: `PYTHONUTF8=1` o `python -X utf8` (las salidas usan ✓/⚠/→). `python -I` ignora
   `PYTHONUTF8`: usar `python -X utf8 -I`. No usar heredocs de bash con backticks para editar
   archivos: escribir el script a un archivo y correrlo.
