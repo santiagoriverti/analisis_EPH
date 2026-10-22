@@ -8,12 +8,15 @@ Proyecto de notebooks (Google Colab) de análisis de la EPH del INDEC.
    trimestres, valores de referencia y reglas. **Empezar por el bloque ⭐ HANDOFF.**
 2. [`docs/TECNICO.md`](docs/TECNICO.md) — pipeline de datos, API de `src/data_loader.py`,
    esquemas/tamaños por trimestre, gotchas resueltos, convenciones de análisis y detalle de
-   los notebooks 06 (termómetro, §6) y 07 (nowcast, §7).
+   los notebooks 06 (termómetro, §6), 07 (nowcast, §7) y 08 (adultos mayores, §8).
 3. [`docs/NOWCAST.md`](docs/NOWCAST.md) — rutina del nowcast (07): cuándo correrlo, qué
    mantener (bono previsional mensual, respaldos), qué revisar, qué hacer cuando sale una EPH.
-4. [`.claude/memoria_EPH.md`](.claude/memoria_EPH.md) — diccionario completo de variables
-   (hogar y personas), claves de vínculo, ponderadores y quiebre de esquema 4T2023.
-   Consultar antes de tocar cualquier notebook de análisis.
+4. [`docs/JUBILADOS.md`](docs/JUBILADOS.md) — rutina del 08 (adultos mayores y jubilados): cómo
+   correrlo y validarlo, qué revisar, valores de referencia, cuidados al leer los resultados,
+   límites de la EPH y mejoras pendientes.
+5. [`.claude/memoria_EPH.md`](.claude/memoria_EPH.md) — diccionario completo de variables
+   (hogar y personas), claves de vínculo, ponderadores y quiebre de esquema 4T2023 (§10: las
+   variables del 08). Consultar antes de tocar cualquier notebook de análisis.
 
 ## Estado (2026-10-22)
 
@@ -29,8 +32,9 @@ EPH todavía no estaba publicado. Pendientes en el HANDOFF de la memoria.
 
 Datos: `.zip` del INDEC en Google Drive (`carga_EPH`), compilados a parquets por trimestre en
 `carga_EPH/processed`; salidas en `carga_EPH/resultados/` (06), `carga_EPH/resultados/nowcast/`
-(07, incluido el registro de versiones) y `carga_EPH/resultados/jubilados/` (08). Los datos NO están en el repo: viven en el Drive del
-usuario; el código corre en Colab, así que cambiar de PC solo requiere clonar el repo.
+(07, incluido el registro de versiones) y `carga_EPH/resultados/jubilados/` (08). Los datos NO
+están en el repo: viven en el Drive del usuario; el código corre en Colab, así que cambiar de PC
+solo requiere clonar el repo.
 
 ## Reglas
 
@@ -51,13 +55,15 @@ usuario; el código corre en Colab, así que cambiar de PC solo requiere clonar 
 - **El notebook 08 se genera** con `tools/gen_08_jubilados.py`; su lógica vive en
   `src/jubilados.py` (definiciones, `preparar`, `estimar`/`distribucion` con bootstrap, gráficos y
   exportación). Probar con `python tools/probar_08_local.py` (~3 min): la sección 15 tiene que dar
-  todo ✓ (incluida la réplica de la pobreza oficial). Ver `docs/TECNICO.md` §8.
+  todo ✓ (incluida la réplica de la pobreza oficial). Ver `docs/TECNICO.md` §8 y `docs/JUBILADOS.md`.
 - No hay datos EPH en el repo. En la PC se pueden tener los datos reales:
   `python tools/probar_06_local.py --descargar` baja los zips del INDEC a `data/raw/`, compila
   a `data/processed/` (ambos ignorados) y corre el 06; `python tools/probar_07_local.py` corre
-  el 07 (~5 min) y `python tools/probar_08_local.py` el 08 (~3 min). Para los demás notebooks, Colab sigue siendo la referencia (el usuario pega las
-  salidas en el chat). Validar en Colab = comparar los CSV que el usuario baja de Drive contra
-  los de `data/processed/resultados_06/` (deben coincidir salvo redondeo ~1e-10).
+  el 07 (~5 min) y `python tools/probar_08_local.py` el 08 (~3 min). Para los demás notebooks,
+  Colab sigue siendo la referencia (el usuario pega las salidas en el chat). Validar en Colab =
+  comparar los CSV que el usuario baja de Drive contra los de `data/processed/resultados_06/`
+  (deben coincidir salvo redondeo ~1e-10); para el 08, con el ZIP que descarga el notebook:
+  `python -X utf8 tools/comparar_zip_08.py <ruta al ZIP>`.
 - El registro de versiones del nowcast (`carga_EPH/resultados/nowcast/registro_versiones.csv`,
   en Drive) es el único estado que no se puede regenerar: no borrarlo.
 - En Windows, evitar heredocs largos con backticks en bash: escribir scripts a archivo. Usar

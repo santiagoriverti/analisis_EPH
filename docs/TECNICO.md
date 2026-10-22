@@ -3,7 +3,8 @@
 Referencia técnica del pipeline de datos y de los notebooks. Estado del proyecto y
 próximos pasos: [`.claude/memoria.md`](../.claude/memoria.md). Diccionario de variables:
 [`.claude/memoria_EPH.md`](../.claude/memoria_EPH.md). Rutina del nowcast (cuándo correrlo, qué
-mantener, qué revisar): [`NOWCAST.md`](NOWCAST.md).
+mantener, qué revisar): [`NOWCAST.md`](NOWCAST.md). Rutina del 08 (adultos mayores: correrlo,
+validarlo, mantenerlo y leer sus resultados): [`JUBILADOS.md`](JUBILADOS.md).
 
 ## 1. Flujo de datos
 
@@ -37,7 +38,7 @@ EPH_usu_<Q>_Trim_<YYYY>_txt.zip  ──►   carga_EPH/*.zip
 - Alternativa local: poner `.zip`/`.txt` en `data/raw/` y usar `out_dir` por defecto
   (`data/processed/`). `tools/probar_06_local.py --descargar` baja los zips del sitio del
   INDEC, compila y corre el notebook 06 completo (ver §6, "Probar en la PC");
-  `tools/probar_07_local.py` corre el 07 (§7).
+  `tools/probar_07_local.py` corre el 07 (§7) y `tools/probar_08_local.py` el 08 (§8).
 
 ## 2. `src/data_loader.py`
 
@@ -77,7 +78,7 @@ Variables del esquema nuevo (primer dato en 2023T4): `EMPLEO`, `SECTOR`, `P_DECC
 1. **RAM de Colab**: nunca concatenar todos los trimestres con todas las columnas;
    usar `load_panel(columns=...)`.
 2. **FUSE de Drive** (`OSError [Errno 107] Transport endpoint is not connected`) al leer
-   muchos parquets desde el mount → copiar primero a disco local (setup de 01-05).
+   muchos parquets desde el mount → copiar primero a disco local (setup de 01-08).
 3. **Coma decimal** del INDEC → `decimal=","` en `_read_csv`.
 4. **Dtypes al concatenar**: si una columna viene como texto en algún trimestre, toda la
    columna queda `object` → `pd.to_numeric(col, errors="coerce")` antes de operar
@@ -87,8 +88,8 @@ Variables del esquema nuevo (primer dato en 2023T4): `EMPLEO`, `SECTOR`, `P_DECC
 6. **Tipos mezclados** (`CH05`) → `_fix_mixed_type_columns` antes del parquet.
 7. **`overwrite`** del 00 debe quedar en `False`; usar `True` solo si cambia la lógica de
    compilación (ej. un fix en `_read_csv`) y hay que regenerar todo (~36+ trimestres).
-8. **Orden de ejecución**: subir zip ⇒ correr 00 ⇒ recién después 01-05 (ver
-   `list_available_quarters` arriba).
+8. **Orden de ejecución**: subir zip ⇒ correr 00 ⇒ recién después 01-08 (ver
+   `list_available_quarters` arriba; el 07 además necesita el 06).
 
 ## 5. Convenciones de análisis
 
@@ -102,7 +103,11 @@ Variables del esquema nuevo (primer dato en 2023T4): `EMPLEO`, `SECTOR`, `P_DECC
 - No respuesta de ingresos: `P21 = -9` tiene `PONDIIO = 0`; las personas de hogares sin
   respuesta (~25%) tienen `PONDIH = 0`. Los ponderadores de ingreso suman el total de la
   población (ya corrigen la no respuesta): no hace falta imputar.
-- Deciles en 03: cuantiles ponderados (`weighted_quantile`); ver pendiente de empates.
+- Deciles en 03: cuantiles ponderados (`weighted_quantile`); ver pendiente de empates. El 08 usa los
+  deciles de personas del INDEC (`P_DECCF`, desde 2023T4).
+- Ingresos reales (06, 07 y 08): IPC de los **meses de referencia** de los ingresos (el mes anterior a
+  cada mes de entrevista). **Pobreza (08): canasta de los meses calendario** del trimestre, que es la
+  convención con la que se replica la tasa oficial del INDEC (§8).
 
 ## 6. Notebook 06 — termómetro (v4)
 
@@ -357,6 +362,10 @@ crítico si sacarlo sube el error > 20% en algún horizonte. Resultados al 2026-
 los microdatos, estimación con bootstrap, gráficos y exportación). Prueba local con datos reales:
 `python tools/probar_08_local.py` (~3 min; `--respaldos` regenera las copias de canastas y pobreza
 oficial). Salidas en `carga_EPH/resultados/jubilados/` (local: `data/processed/resultados_06/jubilados/`).
+Validación contra Colab: `python -X utf8 tools/comparar_zip_08.py <ruta al ZIP de Colab>` (compara las
+38 tablas, el resumen y los gráficos; validado el 2026-10-22 con el commit e2a23a3, diferencia
+relativa máxima 5e-16). Rutina, valores de referencia, cuidados de lectura y mejoras pendientes:
+[`JUBILADOS.md`](JUBILADOS.md).
 
 **Definiciones** (pedido del usuario, 2026-10-22): adultos mayores (AM) = varones de 65+ y mujeres
 de 60+; pre-jubilables = varones de 60-64 y mujeres de 55-59. La **foto** junta los últimos 4
@@ -401,7 +410,8 @@ los trimestres de a uno (`COLS_SERIE`, `indicadores_trimestre`).
   códigos en 2023T4 (AM con `CAT_INAC==1`: 76% → 52%, el resto pasó a "ama de casa") y falta en
   2026T1. Con el monto y `PONDII` la cobertura es 87,5-89% a ambos lados del cambio de esquema.
 - **Pobreza con los meses calendario del trimestre** (convención del INDEC): replica la tasa oficial
-  de personas con error medio 0,11 pp y máximo 0,23 pp (2017S1-2025S2). Con los meses de referencia
+  de personas con error medio 0,11 pp y máximo 0,22 pp (2017S1-2025S2; por región, 0,10-0,35 pp de
+  error medio). Con los meses de referencia
   de los ingresos (mes anterior) el error medio era 2,1 pp (subestima).
 - **Haber en mínimas con los meses de referencia** (mes anterior a la entrevista): concentra más
   casos en la mínima que los meses calendario (p. ej. 2026T1: 7,1% vs 3,2% a ±2% de la mínima).

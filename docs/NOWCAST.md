@@ -90,14 +90,16 @@ Primera prueba real: **2026T2** (versiones del 21/10/2026: termómetro 62,8, IC 
 - **Bono previsional (mensual):** no hay serie pública. Agregar una fila por mes en
   `data/bono_previsional.csv` (`periodo,bono`; última fila cargada: 2026-10) y lo mismo en
   `IPC_jubilados/data/reference/bono_previsional.csv`. Si falta un mes, el módulo repite el último
-  valor.
+  valor. El notebook 08 usa el mismo archivo (banda "la mínima con o sin bono"; ver
+  [`JUBILADOS.md`](JUBILADOS.md) §5).
 - **Respaldo de las series (de vez en cuando):** desde la raíz del repo,
 
   ```bash
   python -X utf8 -c "import src.nowcast as nc; nc.actualizar_respaldo('data/series_nowcast.csv')"
   ```
 
-  Solo reescribe el archivo si la API devolvió todas las series. Commitear el CSV.
+  Solo reescribe el archivo si la API devolvió todas las series. Commitear el CSV. El 08 toma de
+  este respaldo el IPC y el haber mínimo cuando falla la API.
 - **Respaldo del IPC del 06:** ver `TECNICO.md` §6 (comando `curl`).
 - **Registro de versiones:** vive en Drive (`carga_EPH/resultados/nowcast/registro_versiones.csv`)
   y es el único estado del 07 que no se puede regenerar: no borrarlo. El registro local

@@ -387,10 +387,11 @@ Adultos mayores (AM) = varones `CH04==1` con `CH06>=65` y mujeres `CH04==2` con 
 | `V21_M` / `V21_0x_M`, `V22_0x_M` | Aguinaldo y retroactivo de la jubilación (composición del ingreso) | `V22_*_M` solo en el esquema nuevo |
 | `CH03` de todos los integrantes | Tipología de convivencia y si viven con hijos | AM jefe/a o cónyuge con `CH03==3` en el hogar = "hijos en el hogar del AM"; AM con `CH03∈{6,7}` = "AM en el hogar de un hijo/a" (~6-7%) |
 | `P47T`, `ITF` | Parte del ingreso del hogar que aportan los AM | Solo hogares con `PONDIH > 0` (ingresos completos) |
-| `P_DECCF` | Decil de IPCF de las personas (≥4T2023) | 1-10; 12/13 = sin respuesta / sin entrevista |
-| `CH08` | Cobertura de salud | 1/12/13/123 obra social (incluye PAMI) ~90% de los AM |
+| `P_DECCF` | Decil de IPCF de las personas (≥4T2023) | 1-10; 12/13 = sin respuesta / sin entrevista. Con `PONDIH > 0` no aparece el código 0 (verificado T2-2025 a T1-2026): los hogares sin ingresos quedan en un decil |
+| `CH08` | Cobertura de salud | 1/12/13/123 obra social (incluye PAMI, que no se puede separar): 93,6% de los AM; sin cobertura 3,2% (T2-2025 a T1-2026) |
 | `VII1_1`, `VII1_2` (base hogar) | Nº de `COMPONENTE` de quien hace las tareas de la casa | 96 servicio doméstico, 97 persona externa |
-| `CH07` | Estado civil (viudez) | ~27% de los AM son viudos/as |
+| `CH07` | Estado civil (viudez) | ~27% de los AM son viudos/as (72% de las mujeres de 85 y más) |
+| `V12_M` | Cuotas de alimentos o ayuda en dinero de personas que no viven en el hogar | No usado en el 08 (mejora pendiente): la declara el 2,9% de los AM (7,0% de los que viven solos) |
 
 **Pobreza e indigencia:** ITF del hogar contra CBT / CBA por adulto equivalente de su región
 (tabla del INDEC por edad y sexo, `CH06 = −1` → menor de 1 año), **promedio de los tres meses
@@ -401,5 +402,7 @@ dataset 64.2 (sin columna de Cuyo).
 
 **Haber en mínimas:** monto declarado / haber mínimo promedio de los meses de referencia (mes
 anterior a la entrevista): con esos meses hay más masa en la mínima que con los meses calendario.
-Muchos declaran menos que la mínima: el monto es el que se cobra en mano (descuentos de cuotas de
-moratoria y créditos de ANSES) o una pensión no contributiva (PUAM = 80% de la mínima).
+Muchos declaran menos que la mínima (17% de los que cobran): probablemente porque declaran lo que
+cobran en mano (descuentos de cuotas de moratoria y créditos de ANSES) o una pensión no contributiva
+(PUAM = 80% de la mínima); le pasa al 31% de los de moratoria y al 66% de las otras pensiones. La
+EPH no muestra los descuentos: parte puede ser error de declaración.

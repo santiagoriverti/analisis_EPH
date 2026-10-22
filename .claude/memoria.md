@@ -2,14 +2,18 @@
 
 > Documento de continuidad entre sesiones de Claude Code (y entre PCs). Leer primero el
 > bloque **HANDOFF**. Detalle técnico en [`docs/TECNICO.md`](../docs/TECNICO.md); rutina del
-> nowcast en [`docs/NOWCAST.md`](../docs/NOWCAST.md); diccionario de variables en
+> nowcast en [`docs/NOWCAST.md`](../docs/NOWCAST.md); rutina del notebook 08 (adultos mayores) en
+> [`docs/JUBILADOS.md`](../docs/JUBILADOS.md); diccionario de variables en
 > [`memoria_EPH.md`](memoria_EPH.md).
 
 ## ⭐ HANDOFF (última sesión: 2026-10-22)
 
-**Estado: notebook 08 (adultos mayores y jubilados) creado y validado en Colab el 2026-10-22**
-(commit e2a23a3: las 38 tablas, el resumen y los 20 gráficos idénticos a la corrida local, dif. relativa
-máx. 5e-16; sección 15 toda ✓). El resto sin cambios desde el 2026-10-21.
+**Estado: todo commiteado y pusheado a `main`, sin trabajo a medias.** Notebook 08 (adultos mayores
+y jubilados) creado y **validado en Colab** el 2026-10-22 (commit e2a23a3: las 38 tablas, el resumen y
+los 20 gráficos idénticos a la corrida local, dif. relativa máx. 5e-16; sección 15 toda ✓; nota de
+validación en 00fcec4). Al cierre se consolidó la documentación para seguir en otra PC: guía
+[`docs/JUBILADOS.md`](../docs/JUBILADOS.md) y `tools/comparar_zip_08.py` (validación del ZIP de Colab).
+El 06 y el 07 no cambiaron desde el 2026-10-21.
 - **08 (2026-10-22):** pedido del usuario: situación demográfica de los adultos mayores (varones 65+,
   mujeres 60+), cómo viven, si cobran jubilación y cuánto, ingresos, si viven con sus hijos o los
   hijos con ellos según quién es jefe de hogar. Decisiones del usuario: foto con los **últimos 4
@@ -17,6 +21,13 @@ máx. 5e-16; sección 15 toda ✓). El resto sin cambios desde el 2026-10-21.
   población, tramos de edad, pre-jubilables, región y **aglomerado**; incluir trabajo, vivienda,
   estrategias del hogar, salud/educación/viudez; **IC bootstrap + marcas de calidad**; salidas
   **Excel + CSV + PNG + ZIP**. Ver sección "Adultos mayores (notebook 08)" abajo.
+- **Devolución del 08 (2026-10-22):** sólido y validado; cuidados de lectura (pobreza de los AM baja
+  en parte por la escala de adulto equivalente y la vivienda propia, 23,1% apenas arriba de la línea;
+  cobertura = piso; "menos de la mínima" no verificable) y límites de la EPH (solo hijos convivientes,
+  sin rural ni geriátricos). Mejoras evaluadas (vulnerabilidad `ITF_EN_LP`, ayuda de no convivientes
+  `V12_M`, mujeres de 60-64 por edad simple tras el fin de la moratoria, deflactar con el IPC de
+  jubilados, tipo de beneficio en la serie): **el usuario dijo "por ahora no"; no hacerlas sin que
+  lo pida.** Detalle con cifras en `docs/JUBILADOS.md` §7-9.
 - Notebooks 00-06 validados en Colab con 37 trimestres (T1-2017 → T1-2026). El termómetro v4 (06)
   no cambió desde el 2026-10-06.
 - **07 (nowcast del termómetro completo):** validado en Colab el 2026-10-21 hasta el commit
@@ -32,26 +43,29 @@ máx. 5e-16; sección 15 toda ✓). El resto sin cambios desde el 2026-10-21.
   HTML; normalmente sale ~85 días después del trimestre: revisar si cambió el nombre del archivo).
 
 **Cómo retomar (en cualquier PC):**
-1. Clonar el repo (README, "Continuar en otra PC") y leer este HANDOFF, `docs/NOWCAST.md` y
-   `docs/TECNICO.md` §6-7.
-2. Datos reales en la PC (opcional): `python tools/probar_06_local.py --descargar` (baja los zips
-   del INDEC, compila y corre el 06) y después `python tools/probar_07_local.py` (~5 min).
-3. En Colab: correr el 06 y después el 07 (el 07 lee del CSV del 06). El 08 es independiente.
+1. Clonar el repo (README, "Continuar en otra PC") y leer este HANDOFF, `docs/NOWCAST.md`,
+   `docs/JUBILADOS.md` y `docs/TECNICO.md` §6-8.
+2. `pip install -r requirements.txt`. Datos reales en la PC (opcional):
+   `python tools/probar_06_local.py --descargar` (baja los zips del INDEC, compila y corre el 06),
+   después `python tools/probar_07_local.py` (~5 min) y `python tools/probar_08_local.py` (~3 min).
+3. En Colab: correr el 06 y después el 07 (el 07 lee del CSV del 06). El 08 es independiente; para
+   validarlo, bajar su ZIP y correr `python -X utf8 tools/comparar_zip_08.py <ruta al ZIP>` después
+   de `probar_08_local.py` con el mismo commit.
 
 **Próximo paso inmediato:** correr 06 + 07 en Colab para validar la sección 7 del 07 y su gráfico
-nuevo. Para validar el 08 después de un cambio: comparar `tablas/*.csv` del ZIP de Colab con
-`data/processed/resultados_06/jubilados/tablas/` (deben coincidir salvo ~1e-15).
+nuevo (el 08 ya está validado).
 
 **Pendientes (en orden):**
 1. **Cuando salga el T2-2026:** subir el zip → 00 → 06 → 07 → 08. El registro concilia las versiones
-   del 21/10: primer error real (comparar con el RMSE del backtest; ver `docs/NOWCAST.md` §5). El 08
-   corre su foto a T3-2025 a T2-2026 solo; si la canasta regional de abr-jun 2026 no está, la estima
-   con la nacional (aviso en la sección 15).
+   del 21/10: primer error real (comparar con el RMSE del backtest; ver `docs/NOWCAST.md` §5). La foto
+   del 08 pasa sola a T3-2025 a T2-2026; si faltara la canasta regional de algún mes, la estima con la
+   nacional y lo avisa en la sección 15 (al 2026-10-22 las regionales llegaban hasta jun-2026).
 2. Correr el 07 cuando salen sus series (IPC ~día 14, salarios ~45 días, EMAE ~55, SIPA ~100,
    confianza del consumidor a fin de mes) para acumular versiones.
 3. **Mantenimiento mensual:** fila nueva en `data/bono_previsional.csv` (última: 2026-10; también en
-   `IPC_jubilados/data/reference/`). De vez en cuando: `nc.actualizar_respaldo` y el respaldo del
-   IPC del 06 (`docs/NOWCAST.md` §6).
+   `IPC_jubilados/data/reference/`; lo usan el 07 y el 08). De vez en cuando: `nc.actualizar_respaldo`,
+   el respaldo del IPC del 06 (`docs/NOWCAST.md` §6) y los del 08 (`python -X utf8
+   tools/probar_08_local.py --respaldos`: canastas por región y pobreza oficial).
 4. Serie mensual del termómetro (trimestre móvil con Chow-Lin) y actualización semanal con el
    ICR-SEPA (repo `precios_minoristas_supermercados`): era el pedido original del usuario.
 5. Mejorar B y C (candidatas: morosidad de familias y préstamos personales reales del BCRA),
@@ -65,6 +79,8 @@ nuevo. Para validar el 08 después de un cambio: comparar `tablas/*.csv` del ZIP
    con 266 cols, contrastar la desocupación T1-2026 (7,8%) con el informe del INDEC, la skill global
    `indec-api` tiene un ID de IPC que no existe (`148.3_INIVELGENE_DICI_M_26`; el correcto es
    `148.3_INIVELNAL_DICI_M_26`).
+7. Mejoras del 08 (evaluadas, **en espera: el usuario dijo "por ahora no"**): ver
+   `docs/JUBILADOS.md` §9, en orden de prioridad.
 
 ## Adultos mayores y jubilados (notebook 08) — 2026-10-22
 
@@ -87,8 +103,8 @@ estado civil/tareas · regiones y aglomerados · evolución · lectura · contro
 - **Haber en mínimas con los meses de referencia** (mes anterior): más masa en la mínima que con los
   meses calendario. "La mínima (con o sin bono)" = 0,95 × mín a 1,05 × (mín + bono). Debajo de la
   mínima: 31% de los de moratoria (descuento de cuotas) y 66% de otras pensiones (PUAM = 80%).
-- "Trabaja" se mide con `PONDERA` (20,3%); con `PONDII` da menos (18,7%) porque los ocupados no
-  declaran ingresos más seguido. Jubilación × trabajo sí usa `PONDII`.
+- "Trabaja" se mide con `PONDERA` (20,3%); con `PONDII` da menos (18,7%) porque los ocupados dejan
+  de declarar sus ingresos más seguido. Jubilación × trabajo sí usa `PONDII`.
 - Educación: adultos desde 25 años (los de 18-24 todavía estudian).
 
 **Resultados (T2-2025 a T1-2026):** 4,44 M de AM (14,8% de la población, 66% mujeres); 33% de los
@@ -99,6 +115,20 @@ Cobertura 88,8% (mujeres 60-64: 69,5%); aportes 56,5%, moratoria 24,2%, otras 3,
 Cobran la mínima 38,9%, menos 17,1%. Pobreza AM 11,6% (indigencia 1,7%) vs 28,3% adultos, 43,1%
 menores, 29,7% total; AM que no cobran 21,5%. 2017 7,2% → 2024 23,4% → 11,6%. Haber mediano real
 −33% vs 2017, −14% vs 2023. Trabajan 20,3% (59% de los que no cobran), 55% informales.
+Valores de referencia completos: `docs/JUBILADOS.md` §3.
+
+**Validación:** Colab = corrida local (commit e2a23a3, 38 tablas, dif. relativa máx. 5e-16). Para
+repetirla: `python tools/probar_08_local.py` y `python -X utf8 tools/comparar_zip_08.py <ZIP de Colab>`
+(sale con código 1 si algo difiere; probado también con un ZIP alterado a propósito).
+
+**Archivos:** `src/jubilados.py` (toda la lógica), `tools/gen_08_jubilados.py` (genera el notebook),
+`tools/probar_08_local.py` (`--respaldos` regenera los dos CSV de abajo), `tools/comparar_zip_08.py`,
+`data/canastas_regionales.csv`, `data/pobreza_oficial.csv`; además usa `data/series_nowcast.csv` (IPC y
+haber mínimo si falla la API) y `data/bono_previsional.csv`. Salidas en `carga_EPH/resultados/jubilados/`
+(local: `data/processed/resultados_06/jubilados/`).
+
+**Cómo testear cambios:** `python tools/gen_08_jubilados.py && python tools/probar_08_local.py`
+(sección 15 toda ✓; comparar las cifras con `docs/JUBILADOS.md` §3).
 
 ## Nowcast del termómetro (notebook 07) — `termómetro v1` vigente
 
@@ -231,14 +261,15 @@ coinciden con Colab.
 2. Subirlo **sin descomprimir** a Google Drive → Mi unidad → `carga_EPH`.
 3. Correr `00_preparacion_bases.ipynb` en Colab (Runtime → Run all). Debe mostrar el
    trimestre nuevo como "compilado" y los demás "ya existía (salteado)".
-4. Re-correr 01-06 (toman el último trimestre automáticamente; revisar la sección 13 del 06) y
+4. Re-correr 01-06 (toman el último trimestre automáticamente; revisar la sección 13 del 06),
    **después el 07**, que concilia el registro de versiones (error de las proyecciones de ese
-   trimestre; ver `docs/NOWCAST.md` §5).
+   trimestre; ver `docs/NOWCAST.md` §5), y el **08** (su foto pasa sola a los últimos 4 trimestres;
+   revisar su sección 15; ver `docs/JUBILADOS.md` §4).
 5. Si el zip trae nombres internos raros (como T4-2020), ampliar `_parse_period_from_name`
    / `_base_type_from_name` en `src/data_loader.py`.
 6. Actualizar los valores de referencia de abajo y el HANDOFF.
 
-**Importante:** 01-06 obtienen `ULTIMO` con `list_available_quarters()`, que escanea los
+**Importante:** 01-06 y 08 obtienen los trimestres con `list_available_quarters()`, que escanea los
 **zips de Drive**, no los parquets. Si se sube un zip y no se corre el 00, el notebook
 pedirá un parquet inexistente → siempre correr el 00 primero. El 07 toma los trimestres del CSV
 del 06 (y avisa con ⚠ si hay microdatos que el 06 todavía no procesó).
@@ -271,17 +302,25 @@ umbral de ingreso bajo $3.123 de dic-2016; backtest del termómetro RMSE 4,1 / 7
 repetir el último 7,2 / 12,1 / 15,2); backtest de D 9,5 pts (k=1, 80 días); nowcast 2026T2 / T3 /
 T4 = 62,8 / 58,6 / 54,1 (D 35,1 / 31,6 / 24,4).
 
+**Adultos mayores (08), foto T2-2025 a T1-2026:** 4,44 M (14,8% de la población); cobertura 88,8%;
+pobreza AM 11,6% (total 29,7%); viven con hijos 39,8%; cobran la mínima 38,9%; réplica de la pobreza
+oficial error medio 0,11 pp. Tabla completa en `docs/JUBILADOS.md` §3.
+
 ## Qué es / arquitectura (resumen)
 
 - Repo público `santiagoriverti/analisis_EPH`. Notebooks pensados para **Google Colab**.
 - Datos: `.zip` de microdatos INDEC en Drive `carga_EPH` → el **00** los compila a un
   parquet por trimestre en `carga_EPH/processed/eph_T<Q><YY>.parquet` (persistente en
   Drive, **no versionado** en GitHub: "Opción A").
-- 01-07 copian esos parquets a `/content/processed_local` (evita desconexión FUSE) y leen
+- 01-08 copian esos parquets a `/content/processed_local` (evita desconexión FUSE) y leen
   con `load_panel(columns=[...], quarters=[...], out_dir=PROCESSED_DIR)`.
 - Sin dependencia de `pyeph`. Toda la lógica de carga en `src/data_loader.py`; la del nowcast,
-  en `src/nowcast.py` (series de la API de datos.gob.ar, con respaldo en `data/`).
-- Salidas en Drive: `carga_EPH/resultados/` (06) y `carga_EPH/resultados/nowcast/` (07).
+  en `src/nowcast.py` (series de la API de datos.gob.ar, con respaldo en `data/`); la del 08, en
+  `src/jubilados.py` (reusa de `src/nowcast.py` la descarga de series, los meses de referencia y el bono).
+- Notebooks generados por script (no editar el `.ipynb`): 06 (`tools/gen_06_termometro.py`), 07
+  (`tools/gen_07_nowcast.py`) y 08 (`tools/gen_08_jubilados.py`).
+- Salidas en Drive: `carga_EPH/resultados/` (06), `carga_EPH/resultados/nowcast/` (07) y
+  `carga_EPH/resultados/jubilados/` (08).
 - Detalle de funciones, gotchas y decisiones: [`docs/TECNICO.md`](../docs/TECNICO.md).
 
 ## Notebooks
@@ -310,7 +349,8 @@ empleo = ocupados/total; desocupación = desocupados/PEA; subocupación = `INTEN
 - Idioma de trabajo: español. Actualizar este archivo al cerrar cada sesión.
 - Bases pesadas del INDEC no se commitean (`data/raw/*.zip` en `.gitignore`).
 - Validación en Colab: el usuario corre los notebooks, pega las salidas en el chat y baja los CSV
-  de Drive; se comparan contra la corrida local (deben coincidir salvo redondeo ~1e-10).
+  de Drive (del 08, el ZIP que descarga el notebook); se comparan contra la corrida local (deben
+  coincidir salvo redondeo ~1e-10; para el 08, `tools/comparar_zip_08.py`).
 
 ## Historial resumido
 
@@ -338,4 +378,10 @@ empleo = ocupados/total; desocupación = desocupados/PEA; subocupación = `INTEN
   Colab. Después: sección 7 de robustez (subperíodos, calibración, versiones, dependencia de cada
   predictor), gráfico `nowcast_05_evolucion`, guía `docs/NOWCAST.md` y documentación consolidada
   para continuar en otra PC (falta correr en Colab la sección 7 y el gráfico).
-- **2026-10-22**: notebook 08 de adultos mayores y jubilados (preguntas de diseño al usuario; `src/jubilados.py`, generador y prueba local; respaldos `data/canastas_regionales.csv` y `data/pobreza_oficial.csv`; `openpyxl` en requirements). Identificada la columna faltante de T126 (`CAT_INAC`). Validado en Colab el mismo día (idéntico a la corrida local).
+- **2026-10-22**: notebook 08 de adultos mayores y jubilados (preguntas de diseño al usuario;
+  `src/jubilados.py`, generador y prueba local; respaldos `data/canastas_regionales.csv` y
+  `data/pobreza_oficial.csv`; `openpyxl` en requirements). Identificada la columna faltante de T126
+  (`CAT_INAC`). Validado en Colab el mismo día (idéntico a la corrida local). Devolución del 08 con
+  mejoras evaluadas (en espera). Documentación consolidada para otra PC: `docs/JUBILADOS.md`,
+  `tools/comparar_zip_08.py`, README (el 08 había quedado fuera de la tabla de notebooks), TECNICO,
+  CLAUDE.md, NOWCAST y diccionario §10.
